@@ -1,164 +1,172 @@
+// src/screens/HomeScreen.tsx
+
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
   StyleSheet,
-  FlatList,
+  ScrollView,
+  TextInput,
   TouchableOpacity,
   SafeAreaView,
-  RefreshControl,
   Alert,
 } from 'react-native';
 import { Entry } from '../models/Entry';
 import { entryRepository } from '../database/entryRepo';
-import { EntryCard } from '../components/EntryCard';
 
 export const HomeScreen: React.FC = () => {
   const [entries, setEntries] = useState<Entry[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const [selectedDate, setSelectedDate] = useState<string>(
-    new Date().toISOString().split('T')[0]
-  );
+  const [inputText, setInputText] = useState('');
+  const [expenses, setExpenses] = useState<Entry[]>([]);
+  const [tasks, setTasks] = useState<Entry[]>([]);
+  const [totalExpense, setTotalExpense] = useState(0);
 
   const loadEntries = useCallback(async () => {
     try {
-      const data = await entryRepository.getByDate(selectedDate);
+      const today = new Date().toISOString().split('T')[0];
+      const data = await entryRepository.getByDate(today);
       setEntries(data);
+      
+      const expenseList = data.filter(e => e.type === 'expense');
+      const taskList = data.filter(e => e.type === 'activity');
+      
+      setExpenses(expenseList);
+      setTasks(taskList);
+      
+      const total = expenseList.reduce((sum, e) => sum + (e.amount || 0), 0);
+      setTotalExpense(total);
     } catch (error) {
       console.error('Failed to load entries:', error);
-      Alert.alert('Error', 'Failed to load entries');
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
     }
-  }, [selectedDate]);
+  }, []);
 
   useEffect(() => {
     loadEntries();
   }, [loadEntries]);
 
-  const onRefresh = () => {
-    setRefreshing(true);
-    loadEntries();
+  const parseInput = (text: string) => {
+    // Check if input starts with a number (expense)
+    const expenseMatch = text.match(/^(\d+(?:\.\d+)?)\s+(.+)₹/);
+    
+    if (expenseMatch) {
+      return {
+        type: 'expense' as const,
+        amount: parseFloat(expenseMatch[1]),
+        title: expenseMatch[2].trim(),
+      };
+    }
+    
+    // Otherwise it's a task
+    return {
+      type: 'activity' as const,
+      title: text.trim(),
+    };
   };
 
-  const handleEntryPress = (entry: Entry) => {
-    // TODO: Navigate to edit screen
-    console.log('Edit entry:', entry);
+  const handleAddEntry = async () => {
+    if (!inputText.trim()) return;
+
+    try {
+      const parsed = parseInput(inputText);
+      
+      await entryRepository.create({
+        title: parsed.title,
+        type: parsed.type,
+        amount: parsed.type === 'expense' ? parsed.amount : undefined,
+      });
+
+      setInputText('');
+      loadEntries();
+    } catch (error) {
+      Alert.alert('Error', 'Failed to add entry');
+    }
   };
 
-  const handleEntryLongPress = (entry: Entry) => {
-    Alert.alert(
-      'Delete Entry',
-      `Are you sure you want to delete "${entry.title}"?`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await entryRepository.delete(entry.id!);
-              loadEntries();
-            } catch (error) {
-              Alert.alert('Error', 'Failed to delete entry');
-            }
-          },
-        },
-      ]
-    );
+  const handleDeleteEntry = async (id: number) => {
+    try {
+      await entryRepository.delete(id);
+      loadEntries();
+    } catch (error) {
+      Alert.alert('Error', 'Failed to delete entry');
+    }
   };
-
-  const handleAddEntry = () => {
-    // TODO: Navigate to add entry screen
-    console.log('Add new entry');
-  };
-
-  const getTodayStats = () => {
-    const expenseCount = entries.filter(e => e.type === 'expense').length;
-    const activityCount = entries.filter(e => e.type === 'activity').length;
-    const totalExpense = entries
-      .filter(e => e.type === 'expense')
-      .reduce((sum, e) => sum + (e.amount || 0), 0);
-
-    return { expenseCount, activityCount, totalExpense };
-  };
-
-  const stats = getTodayStats();
-
-  const renderHeader = () => (
-    <View style={styles.headerContainer}>
-      <View style={styles.dateHeader}>
-        <Text style={styles.dateText}>
-          {new Date(selectedDate).toLocaleDateString('en-US', {
-            weekday: 'long',
-            year: 'numeric',
-            month: 'long',
-            day: 'numeric',
-          })}
-        </Text>
-      </View>
-
-      <View style={styles.statsContainer}>
-        <View style={styles.statBox}>
-          <Text style={styles.statValue}>{entries.length}</Text>
-          <Text style={styles.statLabel}>Total Entries</Text>
-        </View>
-        <View style={styles.statBox}>
-          <Text style={styles.statValue}>{stats.activityCount}</Text>
-          <Text style={styles.statLabel}>Activities</Text>
-        </View>
-        <View style={styles.statBox}>
-          <Text style={[styles.statValue, styles.expenseValue]}>
-            ₹{stats.totalExpense.toFixed(0)}
-          </Text>
-          <Text style={styles.statLabel}>Expenses</Text>
-        </View>
-      </View>
-    </View>
-  );
-
-  const renderEmpty = () => (
-    <View style={styles.emptyContainer}>
-      <Text style={styles.emptyEmoji}>📝</Text>
-      <Text style={styles.emptyText}>No entries yet</Text>
-      <Text style={styles.emptySubtext}>Tap below to add your first entry</Text>
-    </View>
-  );
-
-  const renderAddButton = () => (
-    <TouchableOpacity style={styles.addButton} onPress={handleAddEntry}>
-      <Text style={styles.addButtonIcon}>➕</Text>
-      <Text style={styles.addButtonText}>Add new entry</Text>
-    </TouchableOpacity>
-  );
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.titleBar}>
-        <Text style={styles.appTitle}>Mizu</Text>
-      </View>
+      <ScrollView contentContainerStyle={styles.content}>
+        {/* Summary Section */}
+        <View style={styles.summarySection}>
+          <View style={styles.summaryItem}>
+            <Text style={styles.summaryLabel}>Expenses</Text>
+            <Text style={styles.expenseAmount}>₹{totalExpense.toFixed(2)}</Text>
+          </View>
+          
+          <View style={styles.summaryItem}>
+            <Text style={styles.summaryLabel}>Tasks</Text>
+            <Text style={styles.taskCount}>{tasks.length}</Text>
+          </View>
+        </View>
 
-      <FlatList
-        data={entries}
-        keyExtractor={item => item.id!.toString()}
-        renderItem={({ item }) => (
-          <EntryCard
-            entry={item}
-            onPress={() => handleEntryPress(item)}
-            onLongPress={() => handleEntryLongPress(item)}
+        {/* Input Section */}
+        <View style={styles.inputSection}>
+          <TextInput
+            style={styles.input}
+            value={inputText}
+            onChangeText={setInputText}
+            placeholder="50 groceries or buy milk"
+            placeholderTextColor="#999"
+            onSubmitEditing={handleAddEntry}
+            returnKeyType="done"
           />
-        )}
-        ListHeaderComponent={renderHeader}
-        ListEmptyComponent={renderEmpty}
-        contentContainerStyle={styles.listContent}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-        }
-      />
+          <Text style={styles.hint}>
+            Include amount for expenses, or just text for tasks
+          </Text>
+        </View>
 
-      {renderAddButton()}
+        {/* Expenses List */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Expenses</Text>
+          {expenses.length === 0 ? (
+            <Text style={styles.emptyText}>No expenses</Text>
+          ) : (
+            expenses.map(expense => (
+              <View key={expense.id} style={styles.listItem}>
+                <Text style={styles.itemText}>{expense.title}</Text>
+                <View style={styles.itemRight}>
+                  <Text style={styles.itemAmount}>₹{expense.amount?.toFixed(2)}</Text>
+                  <TouchableOpacity
+                    onPress={() => handleDeleteEntry(expense.id!)}
+                    style={styles.deleteButton}
+                  >
+                    <Text style={styles.deleteIcon}>🗑️</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            ))
+          )}
+        </View>
+
+        {/* Tasks List */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Tasks</Text>
+          {tasks.length === 0 ? (
+            <Text style={styles.emptyText}>No tasks</Text>
+          ) : (
+            tasks.map(task => (
+              <View key={task.id} style={styles.listItem}>
+                <View style={styles.checkbox} />
+                <Text style={styles.itemText}>{task.title}</Text>
+                <TouchableOpacity
+                  onPress={() => handleDeleteEntry(task.id!)}
+                  style={styles.deleteButton}
+                >
+                  <Text style={styles.deleteIcon}>🗑️</Text>
+                </TouchableOpacity>
+              </View>
+            ))
+          )}
+        </View>
+      </ScrollView>
     </SafeAreaView>
   );
 };
@@ -166,106 +174,101 @@ export const HomeScreen: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F5F5F5',
-  },
-  titleBar: {
-    paddingHorizontal: 20,
-    paddingVertical: 16,
     backgroundColor: '#FFFFFF',
-    borderBottomWidth: 1,
-    borderBottomColor: '#E0E0E0',
   },
-  appTitle: {
-    fontSize: 28,
-    fontWeight: '700',
-    color: '#1A1A1A',
+  content: {
+    padding: 20,
+    paddingBottom: 40,
   },
-  listContent: {
-    padding: 16,
-    paddingBottom: 100,
+  summarySection: {
+    marginBottom: 32,
   },
-  headerContainer: {
+  summaryItem: {
     marginBottom: 20,
   },
-  dateHeader: {
-    marginBottom: 16,
-  },
-  dateText: {
+  summaryLabel: {
     fontSize: 16,
-    fontWeight: '600',
-    color: '#1A1A1A',
-  },
-  statsContainer: {
-    flexDirection: 'row',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    padding: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  statBox: {
-    flex: 1,
-    alignItems: 'center',
-  },
-  statValue: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: '#1A1A1A',
-    marginBottom: 4,
-  },
-  expenseValue: {
-    color: '#E63946',
-  },
-  statLabel: {
-    fontSize: 12,
-    color: '#666',
-    fontWeight: '500',
-  },
-  emptyContainer: {
-    alignItems: 'center',
-    paddingVertical: 60,
-  },
-  emptyEmoji: {
-    fontSize: 64,
-    marginBottom: 16,
-  },
-  emptyText: {
-    fontSize: 18,
-    fontWeight: '600',
     color: '#666',
     marginBottom: 8,
   },
-  emptySubtext: {
-    fontSize: 14,
-    color: '#999',
+  expenseAmount: {
+    fontSize: 56,
+    fontWeight: '300',
+    color: '#000',
+    letterSpacing: -2,
   },
-  addButton: {
-    position: 'absolute',
-    bottom: 24,
-    left: 20,
-    right: 20,
-    backgroundColor: '#457B9D',
-    borderRadius: 16,
-    paddingVertical: 18,
+  taskCount: {
+    fontSize: 56,
+    fontWeight: '300',
+    color: '#000',
+  },
+  inputSection: {
+    marginBottom: 32,
+  },
+  input: {
+    fontSize: 16,
+    color: '#000',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+    borderRadius: 8,
+    marginBottom: 8,
+    backgroundColor: '#FAFAFA',
+  },
+  hint: {
+    fontSize: 13,
+    color: '#999',
+    paddingLeft: 4,
+  },
+  section: {
+    marginBottom: 32,
+  },
+  sectionTitle: {
+    fontSize: 22,
+    fontWeight: '600',
+    color: '#000',
+    marginBottom: 16,
+  },
+  emptyText: {
+    fontSize: 16,
+    color: '#999',
+    textAlign: 'center',
+    paddingVertical: 40,
+  },
+  listItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 8,
-    elevation: 4,
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F0F0F0',
   },
-  addButtonIcon: {
-    fontSize: 20,
-    marginRight: 8,
+  checkbox: {
+    width: 20,
+    height: 20,
+    borderWidth: 2,
+    borderColor: '#E0E0E0',
+    borderRadius: 4,
+    marginRight: 12,
   },
-  addButtonText: {
+  itemText: {
+    flex: 1,
     fontSize: 16,
-    fontWeight: '600',
-    color: '#FFFFFF',
+    color: '#000',
+  },
+  itemRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  itemAmount: {
+    fontSize: 16,
+    color: '#000',
+    marginRight: 12,
+  },
+  deleteButton: {
+    padding: 4,
+  },
+  deleteIcon: {
+    fontSize: 18,
   },
 });
