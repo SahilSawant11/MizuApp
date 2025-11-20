@@ -1,41 +1,47 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, ActivityIndicator } from 'react-native';
-import { initDatabase } from './src/database/db';
+import { testConnection } from './src/config/supabase';
 import { HomeScreen } from './src/screens/HomeScreen';
 
 function App() {
-  const [isDbReady, setIsDbReady] = useState(false);
+  const [isReady, setIsReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const setupDatabase = async () => {
+    const initializeApp = async () => {
       try {
-        await initDatabase();
-        console.log('✅ Database initialized successfully');
-        setIsDbReady(true);
+        const connected = await testConnection();
+        
+        if (!connected) {
+          setError('Failed to connect to Supabase');
+          return;
+        }
+
+        console.log('✅ App initialized successfully');
+        setIsReady(true);
       } catch (err) {
-        console.error('❌ Database initialization failed:', err);
-        setError('Failed to initialize database');
+        console.error('❌ App initialization failed:', err);
+        setError('Failed to initialize app');
       }
     };
 
-    setupDatabase();
+    initializeApp();
   }, []);
 
   if (error) {
     return (
       <View style={styles.centerContainer}>
         <Text style={styles.errorText}>❌ {error}</Text>
-        <Text style={styles.errorSubtext}>Please restart the app</Text>
+        <Text style={styles.errorSubtext}>Please check your Supabase configuration</Text>
       </View>
     );
   }
 
-  if (!isDbReady) {
+  if (!isReady) {
     return (
       <View style={styles.centerContainer}>
         <ActivityIndicator size="large" color="#457B9D" />
-        <Text style={styles.loadingText}>Initializing database...</Text>
+        <Text style={styles.loadingText}>Connecting to Supabase...</Text>
       </View>
     );
   }
@@ -64,6 +70,8 @@ const styles = StyleSheet.create({
   errorSubtext: {
     fontSize: 14,
     color: '#999',
+    textAlign: 'center',
+    paddingHorizontal: 40,
   },
 });
 

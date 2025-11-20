@@ -1,33 +1,30 @@
-import { getDatabase } from './db';
+import { supabase } from '../config/supabase';
 import { Entry, CreateEntryDTO, UpdateEntryDTO } from '../models/Entry';
 
 export const entryRepository = {
   // Create a new entry
   create: async (dto: CreateEntryDTO): Promise<number> => {
-    const db = getDatabase();
-    const now = new Date().toISOString();
-    const date = dto.date || new Date().toISOString().split('T')[0];
-
-    const query = `
-      INSERT INTO entries (title, type, amount, category, payment_mode, notes, date, created_at, updated_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `;
-
     try {
-      const [result] = await db.executeSql(query, [
-        dto.title,
-        dto.type,
-        dto.amount || null,
-        dto.category || null,
-        dto.payment_mode || null,
-        dto.notes || null,
-        date,
-        now,
-        now,
-      ]);
+      const date = dto.date || new Date().toISOString().split('T')[0];
 
-      console.log('✅ Entry created with ID:', result.insertId);
-      return result.insertId;
+      const { data, error } = await supabase
+        .from('entries')
+        .insert({
+          title: dto.title,
+          type: dto.type,
+          amount: dto.amount || null,
+          category: dto.category || null,
+          payment_mode: dto.payment_mode || null,
+          notes: dto.notes || null,
+          date,
+        })
+        .select('id')
+        .single();
+
+      if (error) throw error;
+
+      console.log('✅ Entry created with ID:', data.id);
+      return data.id;
     } catch (error) {
       console.error('❌ Error creating entry:', error);
       throw error;
@@ -36,18 +33,16 @@ export const entryRepository = {
 
   // Get all entries
   getAll: async (): Promise<Entry[]> => {
-    const db = getDatabase();
-    const query = 'SELECT * FROM entries ORDER BY date DESC, created_at DESC';
-
     try {
-      const [results] = await db.executeSql(query);
-      const entries: Entry[] = [];
+      const { data, error } = await supabase
+        .from('entries')
+        .select('*')
+        .order('date', { ascending: false })
+        .order('created_at', { ascending: false });
 
-      for (let i = 0; i < results.rows.length; i++) {
-        entries.push(results.rows.item(i));
-      }
+      if (error) throw error;
 
-      return entries;
+      return data || [];
     } catch (error) {
       console.error('❌ Error fetching entries:', error);
       throw error;
@@ -56,18 +51,16 @@ export const entryRepository = {
 
   // Get entries by date
   getByDate: async (date: string): Promise<Entry[]> => {
-    const db = getDatabase();
-    const query = 'SELECT * FROM entries WHERE date = ? ORDER BY created_at DESC';
-
     try {
-      const [results] = await db.executeSql(query, [date]);
-      const entries: Entry[] = [];
+      const { data, error } = await supabase
+        .from('entries')
+        .select('*')
+        .eq('date', date)
+        .order('created_at', { ascending: false });
 
-      for (let i = 0; i < results.rows.length; i++) {
-        entries.push(results.rows.item(i));
-      }
+      if (error) throw error;
 
-      return entries;
+      return data || [];
     } catch (error) {
       console.error('❌ Error fetching entries by date:', error);
       throw error;
@@ -76,66 +69,44 @@ export const entryRepository = {
 
   // Get entry by ID
   getById: async (id: number): Promise<Entry | null> => {
-    const db = getDatabase();
-    const query = 'SELECT * FROM entries WHERE id = ?';
-
     try {
-      const [results] = await db.executeSql(query, [id]);
-      if (results.rows.length > 0) {
-        return results.rows.item(0);
-      }
-      return null;
+      const { data, error } = await supabase
+        .from('entries')
+        .select('*')
+        .eq('id', id)
+        .single();
+
+      if (error) throw error;
+
+      return data;
     } catch (error) {
       console.error('❌ Error fetching entry by ID:', error);
-      throw error;
+      return null;
     }
   },
 
   // Update entry
   update: async (dto: UpdateEntryDTO): Promise<void> => {
-    const db = getDatabase();
-    const now = new Date().toISOString();
-
-    const fields: string[] = [];
-    const values: any[] = [];
-
-    if (dto.title !== undefined) {
-      fields.push('title = ?');
-      values.push(dto.title);
-    }
-    if (dto.type !== undefined) {
-      fields.push('type = ?');
-      values.push(dto.type);
-    }
-    if (dto.amount !== undefined) {
-      fields.push('amount = ?');
-      values.push(dto.amount);
-    }
-    if (dto.category !== undefined) {
-      fields.push('category = ?');
-      values.push(dto.category);
-    }
-    if (dto.payment_mode !== undefined) {
-      fields.push('payment_mode = ?');
-      values.push(dto.payment_mode);
-    }
-    if (dto.notes !== undefined) {
-      fields.push('notes = ?');
-      values.push(dto.notes);
-    }
-    if (dto.date !== undefined) {
-      fields.push('date = ?');
-      values.push(dto.date);
-    }
-
-    fields.push('updated_at = ?');
-    values.push(now);
-    values.push(dto.id);
-
-    const query = `UPDATE entries SET ${fields.join(', ')} WHERE id = ?`;
-
     try {
-      await db.executeSql(query, values);
+      const updateData: any = {
+        updated_at: new Date().toISOString(),
+      };
+
+      if (dto.title !== undefined) updateData.title = dto.title;
+      if (dto.type !== undefined) updateData.type = dto.type;
+      if (dto.amount !== undefined) updateData.amount = dto.amount;
+      if (dto.category !== undefined) updateData.category = dto.category;
+      if (dto.payment_mode !== undefined) updateData.payment_mode = dto.payment_mode;
+      if (dto.notes !== undefined) updateData.notes = dto.notes;
+      if (dto.date !== undefined) updateData.date = dto.date;
+
+      const { error } = await supabase
+        .from('entries')
+        .update(updateData)
+        .eq('id', dto.id);
+
+      if (error) throw error;
+
       console.log('✅ Entry updated:', dto.id);
     } catch (error) {
       console.error('❌ Error updating entry:', error);
@@ -145,11 +116,14 @@ export const entryRepository = {
 
   // Delete entry
   delete: async (id: number): Promise<void> => {
-    const db = getDatabase();
-    const query = 'DELETE FROM entries WHERE id = ?';
-
     try {
-      await db.executeSql(query, [id]);
+      const { error } = await supabase
+        .from('entries')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+
       console.log('✅ Entry deleted:', id);
     } catch (error) {
       console.error('❌ Error deleting entry:', error);
@@ -159,22 +133,25 @@ export const entryRepository = {
 
   // Get total expenses
   getTotalExpenses: async (startDate?: string, endDate?: string): Promise<number> => {
-    const db = getDatabase();
-    let query = "SELECT SUM(amount) as total FROM entries WHERE type = 'expense'";
-    const params: string[] = [];
-
-    if (startDate) {
-      query += ' AND date >= ?';
-      params.push(startDate);
-    }
-    if (endDate) {
-      query += ' AND date <= ?';
-      params.push(endDate);
-    }
-
     try {
-      const [results] = await db.executeSql(query, params);
-      return results.rows.item(0).total || 0;
+      let query = supabase
+        .from('entries')
+        .select('amount')
+        .eq('type', 'expense');
+
+      if (startDate) {
+        query = query.gte('date', startDate);
+      }
+      if (endDate) {
+        query = query.lte('date', endDate);
+      }
+
+      const { data, error } = await query;
+
+      if (error) throw error;
+
+      const total = data?.reduce((sum, entry) => sum + (entry.amount || 0), 0) || 0;
+      return total;
     } catch (error) {
       console.error('❌ Error calculating total expenses:', error);
       throw error;
@@ -183,24 +160,80 @@ export const entryRepository = {
 
   // Get activity count
   getActivityCount: async (startDate?: string, endDate?: string): Promise<number> => {
-    const db = getDatabase();
-    let query = "SELECT COUNT(*) as count FROM entries WHERE type = 'activity'";
-    const params: string[] = [];
-
-    if (startDate) {
-      query += ' AND date >= ?';
-      params.push(startDate);
-    }
-    if (endDate) {
-      query += ' AND date <= ?';
-      params.push(endDate);
-    }
-
     try {
-      const [results] = await db.executeSql(query, params);
-      return results.rows.item(0).count || 0;
+      let query = supabase
+        .from('entries')
+        .select('id', { count: 'exact', head: true })
+        .eq('type', 'activity');
+
+      if (startDate) {
+        query = query.gte('date', startDate);
+      }
+      if (endDate) {
+        query = query.lte('date', endDate);
+      }
+
+      const { count, error } = await query;
+
+      if (error) throw error;
+
+      return count || 0;
     } catch (error) {
       console.error('❌ Error counting activities:', error);
+      throw error;
+    }
+  },
+
+  // Get entries by date range
+  getByDateRange: async (startDate: string, endDate: string): Promise<Entry[]> => {
+    try {
+      const { data, error } = await supabase
+        .from('entries')
+        .select('*')
+        .gte('date', startDate)
+        .lte('date', endDate)
+        .order('date', { ascending: false })
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      return data || [];
+    } catch (error) {
+      console.error('❌ Error fetching entries by date range:', error);
+      throw error;
+    }
+  },
+
+  // Get expenses by category
+  getExpensesByCategory: async (startDate?: string, endDate?: string): Promise<{ category: string; total: number }[]> => {
+    try {
+      let query = supabase
+        .from('entries')
+        .select('category, amount')
+        .eq('type', 'expense')
+        .not('category', 'is', null);
+
+      if (startDate) query = query.gte('date', startDate);
+      if (endDate) query = query.lte('date', endDate);
+
+      const { data, error } = await query;
+
+      if (error) throw error;
+
+      // Group by category
+      const grouped = (data || []).reduce((acc, entry) => {
+        const cat = entry.category || 'Other';
+        if (!acc[cat]) acc[cat] = 0;
+        acc[cat] += entry.amount || 0;
+        return acc;
+      }, {} as Record<string, number>);
+
+      return Object.entries(grouped).map(([category, total]) => ({
+        category,
+        total,
+      }));
+    } catch (error) {
+      console.error('❌ Error fetching expenses by category:', error);
       throw error;
     }
   },
