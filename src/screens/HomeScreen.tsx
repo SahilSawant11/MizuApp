@@ -1,3 +1,5 @@
+// src/screens/HomeScreen.tsx
+
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
@@ -43,23 +45,28 @@ export const HomeScreen: React.FC = () => {
   }, [loadEntries]);
 
   const parseInput = (text: string) => {
-    // Check if input starts with a number (expense)
-    const expenseMatch = text.match(/^(\d+(?:\.\d+)?)\s+(.+)₹/);
+  // More flexible expense detection
+  const expenseMatch = text.match(/^(\d+(?:\.\d+)?)\s+(.+)$/);
+  
+  if (expenseMatch) {
+    const amount = parseFloat(expenseMatch[1]);
+    let title = expenseMatch[2].trim();
     
-    if (expenseMatch) {
-      return {
-        type: 'expense' as const,
-        amount: parseFloat(expenseMatch[1]),
-        title: expenseMatch[2].trim(),
-      };
-    }
+    // Remove ₹ symbol if user included it
+    title = title.replace(/₹\s*$/, '').trim();
     
-    // Otherwise it's a task
     return {
-      type: 'activity' as const,
-      title: text.trim(),
+      type: 'expense' as const,
+      amount: amount,
+      title: title,
     };
+  }
+  
+  return {
+    type: 'activity' as const,
+    title: text.trim(),
   };
+};
 
   const handleAddEntry = async () => {
     if (!inputText.trim()) return;
