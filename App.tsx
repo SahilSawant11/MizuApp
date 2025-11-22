@@ -2,10 +2,12 @@ import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, ActivityIndicator } from 'react-native';
 import { testConnection } from './src/config/supabase';
 import { HomeScreen } from './src/screens/HomeScreen';
+import { SplashScreen } from './src/screens/SplashScreen';
 
 function App() {
   const [isReady, setIsReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showSplash, setShowSplash] = useState(true);
 
   useEffect(() => {
     const initializeApp = async () => {
@@ -28,6 +30,12 @@ function App() {
     initializeApp();
   }, []);
 
+  // Show splash screen
+  if (showSplash) {
+    return <SplashScreen onFinish={() => setShowSplash(false)} />;
+  }
+
+  // Show error state
   if (error) {
     return (
       <View style={styles.centerContainer}>
@@ -37,6 +45,7 @@ function App() {
     );
   }
 
+  // Show loading state
   if (!isReady) {
     return (
       <View style={styles.centerContainer}>
@@ -46,6 +55,7 @@ function App() {
     );
   }
 
+  // Show main app
   return <HomeScreen />;
 }
 

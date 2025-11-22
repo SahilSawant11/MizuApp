@@ -15,6 +15,7 @@
     "@supabase/supabase-js": "^2.84.0",
     "react": "19.1.1",
     "react-native": "0.82.1",
+    "react-native-bootsplash": "^6.3.11",
     "react-native-safe-area-context": "^5.5.2",
     "react-native-url-polyfill": "^3.0.0"
   },
