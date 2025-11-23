@@ -5,6 +5,10 @@ export const entryRepository = {
   // Create a new entry
   create: async (dto: CreateEntryDTO): Promise<number> => {
     try {
+      // Get current user
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Not authenticated');
+
       const date = dto.date || new Date().toISOString().split('T')[0];
 
       const { data, error } = await supabase
@@ -17,6 +21,7 @@ export const entryRepository = {
           payment_mode: dto.payment_mode || null,
           notes: dto.notes || null,
           date,
+          user_id: user.id, // Add user_id
         })
         .select('id')
         .single();
@@ -31,12 +36,16 @@ export const entryRepository = {
     }
   },
 
-  // Get all entries
+  // Get all entries for current user
   getAll: async (): Promise<Entry[]> => {
     try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Not authenticated');
+
       const { data, error } = await supabase
         .from('entries')
         .select('*')
+        .eq('user_id', user.id) // Filter by user
         .order('date', { ascending: false })
         .order('created_at', { ascending: false });
 
@@ -49,12 +58,16 @@ export const entryRepository = {
     }
   },
 
-  // Get entries by date
+  // Get entries by date for current user
   getByDate: async (date: string): Promise<Entry[]> => {
     try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Not authenticated');
+
       const { data, error } = await supabase
         .from('entries')
         .select('*')
+        .eq('user_id', user.id) // Filter by user
         .eq('date', date)
         .order('created_at', { ascending: false });
 
@@ -67,13 +80,17 @@ export const entryRepository = {
     }
   },
 
-  // Get entry by ID
+  // Get entry by ID (ensures it belongs to current user)
   getById: async (id: number): Promise<Entry | null> => {
     try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Not authenticated');
+
       const { data, error } = await supabase
         .from('entries')
         .select('*')
         .eq('id', id)
+        .eq('user_id', user.id) // Filter by user
         .single();
 
       if (error) throw error;
@@ -85,9 +102,12 @@ export const entryRepository = {
     }
   },
 
-  // Update entry
+  // Update entry (only if it belongs to current user)
   update: async (dto: UpdateEntryDTO): Promise<void> => {
     try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Not authenticated');
+
       const updateData: any = {
         updated_at: new Date().toISOString(),
       };
@@ -103,7 +123,8 @@ export const entryRepository = {
       const { error } = await supabase
         .from('entries')
         .update(updateData)
-        .eq('id', dto.id);
+        .eq('id', dto.id)
+        .eq('user_id', user.id); // Ensure user owns the entry
 
       if (error) throw error;
 
@@ -114,13 +135,17 @@ export const entryRepository = {
     }
   },
 
-  // Delete entry
+  // Delete entry (only if it belongs to current user)
   delete: async (id: number): Promise<void> => {
     try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Not authenticated');
+
       const { error } = await supabase
         .from('entries')
         .delete()
-        .eq('id', id);
+        .eq('id', id)
+        .eq('user_id', user.id); // Ensure user owns the entry
 
       if (error) throw error;
 
@@ -131,12 +156,16 @@ export const entryRepository = {
     }
   },
 
-  // Get total expenses
+  // Get total expenses for current user
   getTotalExpenses: async (startDate?: string, endDate?: string): Promise<number> => {
     try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Not authenticated');
+
       let query = supabase
         .from('entries')
         .select('amount')
+        .eq('user_id', user.id) // Filter by user
         .eq('type', 'expense');
 
       if (startDate) {
@@ -158,12 +187,16 @@ export const entryRepository = {
     }
   },
 
-  // Get activity count
+  // Get activity count for current user
   getActivityCount: async (startDate?: string, endDate?: string): Promise<number> => {
     try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Not authenticated');
+
       let query = supabase
         .from('entries')
         .select('id', { count: 'exact', head: true })
+        .eq('user_id', user.id) // Filter by user
         .eq('type', 'activity');
 
       if (startDate) {
@@ -184,12 +217,16 @@ export const entryRepository = {
     }
   },
 
-  // Get entries by date range
+  // Get entries by date range for current user
   getByDateRange: async (startDate: string, endDate: string): Promise<Entry[]> => {
     try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Not authenticated');
+
       const { data, error } = await supabase
         .from('entries')
         .select('*')
+        .eq('user_id', user.id) // Filter by user
         .gte('date', startDate)
         .lte('date', endDate)
         .order('date', { ascending: false })
@@ -204,12 +241,16 @@ export const entryRepository = {
     }
   },
 
-  // Get expenses by category
+  // Get expenses by category for current user
   getExpensesByCategory: async (startDate?: string, endDate?: string): Promise<{ category: string; total: number }[]> => {
     try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Not authenticated');
+
       let query = supabase
         .from('entries')
         .select('category, amount')
+        .eq('user_id', user.id) // Filter by user
         .eq('type', 'expense')
         .not('category', 'is', null);
 

@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 import { Entry } from '../models/Entry';
 import { entryRepository } from '../database/entryRepo';
+import { useAuth } from '../contexts/AuthContext';
 
 export const HomeScreen: React.FC = () => {
   const [entries, setEntries] = useState<Entry[]>([]);
@@ -20,6 +21,7 @@ export const HomeScreen: React.FC = () => {
   const [expenses, setExpenses] = useState<Entry[]>([]);
   const [tasks, setTasks] = useState<Entry[]>([]);
   const [totalExpense, setTotalExpense] = useState(0);
+  const { user, signOut } = useAuth();
 
   const loadEntries = useCallback(async () => {
     try {
@@ -45,28 +47,25 @@ export const HomeScreen: React.FC = () => {
   }, [loadEntries]);
 
   const parseInput = (text: string) => {
-  // More flexible expense detection
-  const expenseMatch = text.match(/^(\d+(?:\.\d+)?)\s+(.+)$/);
-  
-  if (expenseMatch) {
-    const amount = parseFloat(expenseMatch[1]);
-    let title = expenseMatch[2].trim();
+    const expenseMatch = text.match(/^(\d+(?:\.\d+)?)\s+(.+)$/);
     
-    // Remove ₹ symbol if user included it
-    title = title.replace(/₹\s*$/, '').trim();
+    if (expenseMatch) {
+      const amount = parseFloat(expenseMatch[1]);
+      let title = expenseMatch[2].trim();
+      title = title.replace(/₹\s*$/, '').trim();
+      
+      return {
+        type: 'expense' as const,
+        amount: amount,
+        title: title,
+      };
+    }
     
     return {
-      type: 'expense' as const,
-      amount: amount,
-      title: title,
+      type: 'activity' as const,
+      title: text.trim(),
     };
-  }
-  
-  return {
-    type: 'activity' as const,
-    title: text.trim(),
   };
-};
 
   const handleAddEntry = async () => {
     if (!inputText.trim()) return;
@@ -96,8 +95,38 @@ export const HomeScreen: React.FC = () => {
     }
   };
 
+  const handleSignOut = () => {
+    Alert.alert(
+      'Sign Out',
+      'Are you sure you want to sign out?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Sign Out',
+          style: 'destructive',
+          onPress: async () => {
+            await signOut();
+          },
+        },
+      ]
+    );
+  };
+
   return (
     <SafeAreaView style={styles.container}>
+      {/* Header */}
+      <View style={styles.headerBar}>
+        <View>
+          <Text style={styles.greeting}>Hello,</Text>
+          <Text style={styles.userName}>
+            {user?.user_metadata?.full_name || 'User'}
+          </Text>
+        </View>
+        <TouchableOpacity style={styles.signOutButton} onPress={handleSignOut}>
+          <Text style={styles.signOutText}>Sign Out</Text>
+        </TouchableOpacity>
+      </View>
+
       <ScrollView contentContainerStyle={styles.content}>
         {/* Summary Section */}
         <View style={styles.summarySection}>
@@ -180,6 +209,36 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#FFFFFF',
+  },
+  headerBar: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F0F0F0',
+  },
+  greeting: {
+    fontSize: 14,
+    color: '#666',
+  },
+  userName: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#000',
+  },
+  signOutButton: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+  },
+  signOutText: {
+    fontSize: 14,
+    color: '#666',
+    fontWeight: '600',
   },
   content: {
     padding: 20,
