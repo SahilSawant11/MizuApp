@@ -1,5 +1,3 @@
-// src/screens/HomeScreen.tsx
-
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
@@ -14,6 +12,8 @@ import {
 import { Entry } from '../models/Entry';
 import { entryRepository } from '../database/entryRepo';
 import { useAuth } from '../contexts/AuthContext';
+import { DebugAuthHelper } from '../components/DebugAuthHelper';
+import { supabase } from '../config/supabase';
 
 export const HomeScreen: React.FC = () => {
   const [entries, setEntries] = useState<Entry[]>([]);
@@ -37,14 +37,23 @@ export const HomeScreen: React.FC = () => {
       
       const total = expenseList.reduce((sum, e) => sum + (e.amount || 0), 0);
       setTotalExpense(total);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to load entries:', error);
+      if (error.message?.includes('Not authenticated')) {
+        Alert.alert(
+          'Authentication Error',
+          'You need to sign in again. Please use the debug tools below.',
+          [{ text: 'OK' }]
+        );
+      }
     }
   }, []);
 
   useEffect(() => {
-    loadEntries();
-  }, [loadEntries]);
+    if (user) {
+      loadEntries();
+    }
+  }, [loadEntries, user]);
 
   const parseInput = (text: string) => {
     const expenseMatch = text.match(/^(\d+(?:\.\d+)?)\s+(.+)$/);
@@ -95,17 +104,25 @@ export const HomeScreen: React.FC = () => {
     }
   };
 
-  const handleSignOut = () => {
+  const handleSignOut = async () => {
     Alert.alert(
       'Sign Out',
-      'Are you sure you want to sign out?',
+      'Are you sure you want to sign out? You will need to enter your PIN again.',
       [
         { text: 'Cancel', style: 'cancel' },
         {
           text: 'Sign Out',
           style: 'destructive',
           onPress: async () => {
-            await signOut();
+            try {
+              const { error } = await supabase.auth.signOut();
+              if (error) throw error;
+              console.log('✅ Signed out successfully');
+              // The AuthContext will automatically detect this and redirect to PIN screen
+            } catch (error: any) {
+              console.error('❌ Sign out error:', error);
+              Alert.alert('Error', error.message || 'Failed to sign out');
+            }
           },
         },
       ]
@@ -128,6 +145,8 @@ export const HomeScreen: React.FC = () => {
       </View>
 
       <ScrollView contentContainerStyle={styles.content}>
+        {/* Debug Helper - Only shows in DEV mode */}
+
         {/* Summary Section */}
         <View style={styles.summarySection}>
           <View style={styles.summaryItem}>

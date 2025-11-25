@@ -1,43 +1,43 @@
-// src/screens/AuthScreen.tsx
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   View,
   Text,
-  StyleSheet,
+  StyleSheet as RNStyleSheet,
   TextInput,
   TouchableOpacity,
   ScrollView,
   KeyboardAvoidingView,
   Platform,
   Alert,
-  Animated,
+  Animated as RNAnimated,
 } from 'react-native';
 import { supabase } from '../config/supabase';
+import { colors } from '../theme/colors';
 
 interface AuthScreenProps {
   onAuthSuccess: () => void;
 }
 
-type AuthMode = 'welcome' | 'signin' | 'signup';
+type AuthMode = 'welcome' | 'phone' | 'otp' | 'username';
 
 export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess }) => {
   const [mode, setMode] = useState<AuthMode>('welcome');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [name, setName] = useState('');
+  const [phoneNumber, setPhoneNumber] = useState('');
+  const [otp, setOtp] = useState(['', '', '', '', '', '']);
+  const [username, setUsername] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const fadeAnim = useRef(new Animated.Value(0)).current;
-  const slideAnim = useRef(new Animated.Value(30)).current;
+  const fadeAnim = useRef(new RNAnimated.Value(0)).current;
+  const slideAnim = useRef(new RNAnimated.Value(30)).current;
 
-  React.useEffect(() => {
-    Animated.parallel([
-      Animated.timing(fadeAnim, {
+  useEffect(() => {
+    RNAnimated.parallel([
+      RNAnimated.timing(fadeAnim, {
         toValue: 1,
-        duration: 600,
+        duration: 500,
         useNativeDriver: true,
       }),
-      Animated.spring(slideAnim, {
+      RNAnimated.spring(slideAnim, {
         toValue: 0,
         friction: 8,
         useNativeDriver: true,
@@ -45,443 +45,591 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess }) => {
     ]).start();
   }, [mode]);
 
-  const handleSignUp = async () => {
-    if (!email || !password || !name) {
-      Alert.alert('Error', 'Please fill in all fields');
-      return;
-    }
-
-    if (password.length < 6) {
-      Alert.alert('Error', 'Password must be at least 6 characters');
+  const handleSendOTP = async () => {
+    if (phoneNumber.length !== 10) {
+      Alert.alert('Error', 'Please enter a valid 10-digit mobile number');
       return;
     }
 
     setLoading(true);
     try {
-      const { data, error } = await supabase.auth.signUp({
-        email: email.trim().toLowerCase(),
-        password: password,
-        options: {
-          data: {
-            full_name: name.trim(),
-          },
-        },
+      // Using Supabase Phone Auth
+      const { error } = await supabase.auth.signInWithOtp({
+        phone: `+91${phoneNumber}`,
       });
 
       if (error) throw error;
 
-      if (data.user) {
-        Alert.alert(
-          'Success!',
-          'Account created successfully. Please check your email to verify your account.',
-          [{ text: 'OK', onPress: () => setMode('signin') }]
-        );
-      }
+      Alert.alert('Success', 'OTP sent to your mobile number');
+      setMode('otp');
     } catch (error: any) {
-      Alert.alert('Sign Up Failed', error.message);
+      Alert.alert('Error', error.message);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleSignIn = async () => {
-    if (!email || !password) {
-      Alert.alert('Error', 'Please enter email and password');
+  const handleVerifyOTP = async () => {
+    const otpCode = otp.join('');
+    if (otpCode.length !== 6) {
+      Alert.alert('Error', 'Please enter the complete OTP');
       return;
     }
 
     setLoading(true);
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email: email.trim().toLowerCase(),
-        password: password,
+      const { data, error } = await supabase.auth.verifyOtp({
+        phone: `+91${phoneNumber}`,
+        token: otpCode,
+        type: 'sms',
       });
 
       if (error) throw error;
 
       if (data.user) {
-        onAuthSuccess();
+        // Check if user already has a name
+        if (data.user.user_metadata?.full_name) {
+          onAuthSuccess();
+        } else {
+          setMode('username');
+        }
       }
     } catch (error: any) {
-      Alert.alert('Sign In Failed', error.message);
+      Alert.alert('Error', error.message);
     } finally {
       setLoading(false);
     }
   };
 
-  const resetForm = () => {
-    setEmail('');
-    setPassword('');
-    setName('');
+  const handleCompleteSetup = async () => {
+    if (!username.trim()) {
+      Alert.alert('Error', 'Please enter your name');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const { error } = await supabase.auth.updateUser({
+        data: { full_name: username.trim() },
+      });
+
+      if (error) throw error;
+
+      onAuthSuccess();
+    } catch (error: any) {
+      Alert.alert('Error', error.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   // Welcome Screen
   if (mode === 'welcome') {
     return (
-      <View style={styles.container}>
-        <Animated.View
+      <View style={authStyles.container}>
+        <RNAnimated.View
           style={[
-            styles.welcomeContent,
+            authStyles.welcomeContent,
             { opacity: fadeAnim, transform: [{ translateY: slideAnim }] },
           ]}
         >
-          <View style={styles.logoContainer}>
-            <Text style={styles.logo}>💧</Text>
-          </View>
-          
-          <Text style={styles.welcomeTitle}>Welcome to Mizu</Text>
-          <Text style={styles.welcomeSubtitle}>
-            Your personal finance and activity tracker
-          </Text>
-
-          <View style={styles.welcomeButtons}>
-            <TouchableOpacity
-              style={styles.primaryButton}
-              onPress={() => {
-                resetForm();
-                setMode('signup');
-              }}
-            >
-              <Text style={styles.primaryButtonText}>Create Account</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.secondaryButton}
-              onPress={() => {
-                resetForm();
-                setMode('signin');
-              }}
-            >
-              <Text style={styles.secondaryButtonText}>Sign In</Text>
-            </TouchableOpacity>
+          <View style={authStyles.welcomeHeader}>
+            <View style={authStyles.welcomeIconContainer}>
+              <Text style={authStyles.welcomeIcon}>💧</Text>
+            </View>
+            <Text style={authStyles.welcomeTitle}>Welcome to Mizu</Text>
+            <Text style={authStyles.welcomeSubtitle}>
+              Your simple expense and task tracker
+            </Text>
           </View>
 
-          <Text style={styles.termsText}>
-            By continuing, you agree to our Terms of Service and Privacy Policy
-          </Text>
-        </Animated.View>
+          <View style={authStyles.featuresList}>
+            <FeatureItem icon="💰" title="Track Expenses" description="Monitor your spending effortlessly" />
+            <FeatureItem icon="✓" title="Manage Tasks" description="Stay organized and productive" />
+            <FeatureItem icon="📊" title="View Insights" description="Understand your habits better" />
+          </View>
+
+          <View style={authStyles.welcomeFooter}>
+            <TouchableOpacity
+              style={authStyles.primaryButton}
+              onPress={() => setMode('phone')}
+            >
+              <Text style={authStyles.primaryButtonText}>Get Started</Text>
+            </TouchableOpacity>
+
+            <Text style={authStyles.termsText}>
+              By continuing, you agree to our Terms & Privacy Policy
+            </Text>
+          </View>
+        </RNAnimated.View>
       </View>
     );
   }
 
-  // Sign In / Sign Up Screen
-  return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      style={styles.container}
-    >
-      <ScrollView
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled"
+  // Phone Number Entry
+  if (mode === 'phone') {
+    return (
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={authStyles.container}
       >
-        <Animated.View
-          style={[
-            styles.formContent,
-            { opacity: fadeAnim, transform: [{ translateY: slideAnim }] },
-          ]}
-        >
-          {/* Back Button */}
-          <TouchableOpacity
-            style={styles.backButton}
-            onPress={() => {
-              resetForm();
-              setMode('welcome');
-            }}
+        <ScrollView contentContainerStyle={authStyles.scrollContent}>
+          <RNAnimated.View
+            style={[
+              authStyles.formContent,
+              { opacity: fadeAnim, transform: [{ translateY: slideAnim }] },
+            ]}
           >
-            <Text style={styles.backButtonText}>← Back</Text>
-          </TouchableOpacity>
+            <TouchableOpacity
+              style={authStyles.backButton}
+              onPress={() => setMode('welcome')}
+            >
+              <Text style={authStyles.backIcon}>←</Text>
+            </TouchableOpacity>
 
-          {/* Header */}
-          <View style={styles.header}>
-            <Text style={styles.headerTitle}>
-              {mode === 'signin' ? 'Welcome back' : 'Create Account'}
-            </Text>
-            <Text style={styles.headerSubtitle}>
-              {mode === 'signin'
-                ? 'Sign in to continue tracking'
-                : 'Join Mizu to start tracking'}
-            </Text>
-          </View>
+            <View style={authStyles.formHeader}>
+              <View style={authStyles.formIconContainer}>
+                <Text style={authStyles.formIcon}>📱</Text>
+              </View>
+              <Text style={authStyles.formTitle}>Enter Your Mobile</Text>
+              <Text style={authStyles.formSubtitle}>
+                We'll send you a verification code
+              </Text>
+            </View>
 
-          {/* Form */}
-          <View style={styles.form}>
-            {mode === 'signup' && (
-              <View style={styles.inputGroup}>
-                <Text style={styles.label}>Full Name</Text>
+            <View style={authStyles.inputContainer}>
+              <View style={authStyles.phoneInputWrapper}>
+                <View style={authStyles.countryCode}>
+                  <Text style={authStyles.countryCodeText}>🇮🇳 +91</Text>
+                </View>
                 <TextInput
-                  style={styles.input}
-                  value={name}
-                  onChangeText={setName}
-                  placeholder="John Doe"
-                  placeholderTextColor="#999"
-                  autoCapitalize="words"
+                  style={authStyles.phoneInput}
+                  value={phoneNumber}
+                  onChangeText={setPhoneNumber}
+                  placeholder="9876543210"
+                  placeholderTextColor={colors.textMuted}
+                  keyboardType="phone-pad"
+                  maxLength={10}
                   editable={!loading}
                 />
               </View>
-            )}
-
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Email</Text>
-              <TextInput
-                style={styles.input}
-                value={email}
-                onChangeText={setEmail}
-                placeholder="you@example.com"
-                placeholderTextColor="#999"
-                keyboardType="email-address"
-                autoCapitalize="none"
-                autoCorrect={false}
-                editable={!loading}
-              />
             </View>
-
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Password</Text>
-              <TextInput
-                style={styles.input}
-                value={password}
-                onChangeText={setPassword}
-                placeholder="••••••••"
-                placeholderTextColor="#999"
-                secureTextEntry
-                autoCapitalize="none"
-                editable={!loading}
-              />
-              {mode === 'signup' && (
-                <Text style={styles.hint}>
-                  Must be at least 6 characters
-                </Text>
-              )}
-            </View>
-
-            {mode === 'signin' && (
-              <TouchableOpacity style={styles.forgotPassword}>
-                <Text style={styles.forgotPasswordText}>
-                  Forgot Password?
-                </Text>
-              </TouchableOpacity>
-            )}
 
             <TouchableOpacity
-              style={[styles.submitButton, loading && styles.submitButtonDisabled]}
-              onPress={mode === 'signin' ? handleSignIn : handleSignUp}
-              disabled={loading}
+              style={[
+                authStyles.continueButton,
+                phoneNumber.length === 10 && !loading ? authStyles.continueButtonActive : null,
+              ]}
+              onPress={handleSendOTP}
+              disabled={phoneNumber.length !== 10 || loading}
             >
-              <Text style={styles.submitButtonText}>
-                {loading
-                  ? 'Please wait...'
-                  : mode === 'signin'
-                  ? 'Sign In'
-                  : 'Create Account'}
+              <Text style={authStyles.continueButtonText}>
+                {loading ? 'Sending...' : 'Continue'}
               </Text>
             </TouchableOpacity>
+          </RNAnimated.View>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    );
+  }
 
-            <View style={styles.switchMode}>
-              <Text style={styles.switchModeText}>
-                {mode === 'signin'
-                  ? "Don't have an account? "
-                  : 'Already have an account? '}
+  // OTP Verification
+  if (mode === 'otp') {
+    return (
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={authStyles.container}
+      >
+        <ScrollView contentContainerStyle={authStyles.scrollContent}>
+          <RNAnimated.View
+            style={[
+              authStyles.formContent,
+              { opacity: fadeAnim, transform: [{ translateY: slideAnim }] },
+            ]}
+          >
+            <TouchableOpacity
+              style={authStyles.backButton}
+              onPress={() => setMode('phone')}
+            >
+              <Text style={authStyles.backIcon}>←</Text>
+            </TouchableOpacity>
+
+            <View style={authStyles.formHeader}>
+              <View style={authStyles.formIconContainer}>
+                <Text style={authStyles.formIcon}>🔐</Text>
+              </View>
+              <Text style={authStyles.formTitle}>Enter OTP</Text>
+              <Text style={authStyles.formSubtitle}>
+                Code sent to +91 {phoneNumber}
               </Text>
-              <TouchableOpacity
-                onPress={() => {
-                  resetForm();
-                  setMode(mode === 'signin' ? 'signup' : 'signin');
-                }}
-                disabled={loading}
-              >
-                <Text style={styles.switchModeLink}>
-                  {mode === 'signin' ? 'Sign Up' : 'Sign In'}
-                </Text>
-              </TouchableOpacity>
             </View>
-          </View>
-        </Animated.View>
-      </ScrollView>
-    </KeyboardAvoidingView>
-  );
+
+            <View style={authStyles.otpContainer}>
+              {otp.map((digit, index) => (
+                <TextInput
+                  key={index}
+                  style={authStyles.otpInput}
+                  value={digit}
+                  onChangeText={(text) => {
+                    const newOtp = [...otp];
+                    newOtp[index] = text;
+                    setOtp(newOtp);
+                  }}
+                  maxLength={1}
+                  keyboardType="number-pad"
+                  placeholderTextColor={colors.textMuted}
+                  editable={!loading}
+                />
+              ))}
+            </View>
+
+            <TouchableOpacity
+              style={authStyles.resendButton}
+              onPress={handleSendOTP}
+              disabled={loading}
+            >
+              <Text style={authStyles.resendText}>Resend Code</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[
+                authStyles.continueButton,
+                otp.every(d => d) && !loading ? authStyles.continueButtonActive : null,
+              ]}
+              onPress={handleVerifyOTP}
+              disabled={!otp.every(d => d) || loading}
+            >
+              <Text style={authStyles.continueButtonText}>
+                {loading ? 'Verifying...' : 'Verify'}
+              </Text>
+            </TouchableOpacity>
+          </RNAnimated.View>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    );
+  }
+
+  // Username Entry
+  if (mode === 'username') {
+    return (
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={authStyles.container}
+      >
+        <ScrollView contentContainerStyle={authStyles.scrollContent}>
+          <RNAnimated.View
+            style={[
+              authStyles.formContent,
+              { opacity: fadeAnim, transform: [{ translateY: slideAnim }] },
+            ]}
+          >
+            <View style={authStyles.formHeader}>
+              <View style={authStyles.formIconContainer}>
+                <Text style={authStyles.formIcon}>👋</Text>
+              </View>
+              <Text style={authStyles.formTitle}>What's Your Name?</Text>
+              <Text style={authStyles.formSubtitle}>
+                Help us personalize your experience
+              </Text>
+            </View>
+
+            <View style={authStyles.inputContainer}>
+              <TextInput
+                style={authStyles.textInput}
+                value={username}
+                onChangeText={setUsername}
+                placeholder="Enter your first name"
+                placeholderTextColor={colors.textMuted}
+                autoCapitalize="words"
+                editable={!loading}
+              />
+            </View>
+
+            <TouchableOpacity
+              style={[
+                authStyles.continueButton,
+                username.trim() && !loading ? authStyles.continueButtonActive : null,
+              ]}
+              onPress={handleCompleteSetup}
+              disabled={!username.trim() || loading}
+            >
+              <Text style={authStyles.continueButtonText}>
+                {loading ? 'Setting up...' : 'Complete Setup'}
+              </Text>
+            </TouchableOpacity>
+          </RNAnimated.View>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    );
+  }
+
+  return null;
 };
 
-const styles = StyleSheet.create({
+const FeatureItem = ({ icon, title, description }: { icon: string; title: string; description: string }) => (
+  <View style={authStyles.featureItem}>
+    <View style={authStyles.featureIcon}>
+      <Text style={authStyles.featureIconText}>{icon}</Text>
+    </View>
+    <View style={authStyles.featureContent}>
+      <Text style={authStyles.featureTitle}>{title}</Text>
+      <Text style={authStyles.featureDescription}>{description}</Text>
+    </View>
+  </View>
+);
+
+const authStyles = RNStyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.background,
   },
   scrollContent: {
     flexGrow: 1,
   },
   welcomeContent: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 32,
+    paddingHorizontal: 24,
+    paddingTop: 60,
+    paddingBottom: 40,
   },
-  logoContainer: {
+  welcomeHeader: {
+    alignItems: 'center',
+    marginBottom: 48,
+  },
+  welcomeIconContainer: {
     width: 120,
     height: 120,
     borderRadius: 60,
-    backgroundColor: '#457B9D',
+    backgroundColor: colors.primary,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 32,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 12,
+    marginBottom: 24,
+    shadowColor: colors.shadow,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 1,
+    shadowRadius: 16,
     elevation: 8,
   },
-  logo: {
-    fontSize: 64,
+  welcomeIcon: {
+    fontSize: 60,
   },
   welcomeTitle: {
-    fontSize: 32,
-    fontWeight: '700',
-    color: '#000',
+    fontSize: 36,
+    fontWeight: '800',
+    color: colors.text,
     marginBottom: 12,
-    textAlign: 'center',
+    letterSpacing: -1,
   },
   welcomeSubtitle: {
     fontSize: 16,
-    color: '#666',
+    color: colors.textLight,
     textAlign: 'center',
-    marginBottom: 48,
-    paddingHorizontal: 20,
+    lineHeight: 24,
   },
-  welcomeButtons: {
-    width: '100%',
-    gap: 16,
-    marginBottom: 32,
+  featuresList: {
+    flex: 1,
+    justifyContent: 'center',
+  },
+  featureItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.surface,
+    borderRadius: 16,
+    padding: 20,
+    marginBottom: 16,
+    shadowColor: colors.shadow,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 1,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  featureIcon: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: colors.primaryLight,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 16,
+  },
+  featureIconText: {
+    fontSize: 28,
+  },
+  featureContent: {
+    flex: 1,
+  },
+  featureTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: colors.text,
+    marginBottom: 4,
+  },
+  featureDescription: {
+    fontSize: 14,
+    color: colors.textLight,
+    lineHeight: 20,
+  },
+  welcomeFooter: {
+    marginTop: 32,
   },
   primaryButton: {
-    backgroundColor: '#457B9D',
-    paddingVertical: 16,
-    borderRadius: 12,
+    backgroundColor: colors.primary,
+    paddingVertical: 18,
+    borderRadius: 16,
     alignItems: 'center',
-    shadowColor: '#457B9D',
+    marginBottom: 20,
+    shadowColor: colors.shadow,
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 4,
+    shadowOpacity: 1,
+    shadowRadius: 12,
+    elevation: 5,
   },
   primaryButtonText: {
-    fontSize: 17,
-    fontWeight: '600',
+    fontSize: 18,
+    fontWeight: '700',
     color: '#FFFFFF',
-  },
-  secondaryButton: {
-    backgroundColor: '#FFFFFF',
-    paddingVertical: 16,
-    borderRadius: 12,
-    alignItems: 'center',
-    borderWidth: 2,
-    borderColor: '#457B9D',
-  },
-  secondaryButtonText: {
-    fontSize: 17,
-    fontWeight: '600',
-    color: '#457B9D',
+    letterSpacing: 0.5,
   },
   termsText: {
     fontSize: 12,
-    color: '#999',
+    color: colors.textMuted,
     textAlign: 'center',
-    paddingHorizontal: 40,
+    lineHeight: 18,
   },
   formContent: {
     flex: 1,
-    paddingTop: 60,
     paddingHorizontal: 24,
+    paddingTop: 60,
   },
   backButton: {
-    marginBottom: 24,
-  },
-  backButtonText: {
-    fontSize: 16,
-    color: '#457B9D',
-    fontWeight: '600',
-  },
-  header: {
-    marginBottom: 32,
-  },
-  headerTitle: {
-    fontSize: 32,
-    fontWeight: '700',
-    color: '#000',
-    marginBottom: 8,
-  },
-  headerSubtitle: {
-    fontSize: 16,
-    color: '#666',
-  },
-  form: {
-    flex: 1,
-  },
-  inputGroup: {
-    marginBottom: 24,
-  },
-  label: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#000',
-    marginBottom: 8,
-  },
-  input: {
-    fontSize: 16,
-    color: '#000',
-    paddingVertical: 14,
-    paddingHorizontal: 16,
-    borderWidth: 1.5,
-    borderColor: '#E0E0E0',
-    borderRadius: 12,
-    backgroundColor: '#FAFAFA',
-  },
-  hint: {
-    fontSize: 12,
-    color: '#999',
-    marginTop: 6,
-    paddingLeft: 4,
-  },
-  forgotPassword: {
-    alignSelf: 'flex-end',
-    marginBottom: 24,
-  },
-  forgotPasswordText: {
-    fontSize: 14,
-    color: '#457B9D',
-    fontWeight: '600',
-  },
-  submitButton: {
-    backgroundColor: '#457B9D',
-    paddingVertical: 16,
-    borderRadius: 12,
-    alignItems: 'center',
-    marginBottom: 24,
-    shadowColor: '#457B9D',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  submitButtonDisabled: {
-    opacity: 0.6,
-  },
-  submitButtonText: {
-    fontSize: 17,
-    fontWeight: '600',
-    color: '#FFFFFF',
-  },
-  switchMode: {
-    flexDirection: 'row',
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: colors.surface,
     justifyContent: 'center',
     alignItems: 'center',
+    marginBottom: 32,
+    shadowColor: colors.shadow,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 1,
+    shadowRadius: 4,
+    elevation: 2,
   },
-  switchModeText: {
-    fontSize: 14,
-    color: '#666',
+  backIcon: {
+    fontSize: 24,
+    color: colors.text,
   },
-  switchModeLink: {
-    fontSize: 14,
-    color: '#457B9D',
+  formHeader: {
+    alignItems: 'center',
+    marginBottom: 48,
+  },
+  formIconContainer: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: colors.primaryLight,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 24,
+  },
+  formIcon: {
+    fontSize: 40,
+  },
+  formTitle: {
+    fontSize: 28,
+    fontWeight: '800',
+    color: colors.text,
+    marginBottom: 8,
+  },
+  formSubtitle: {
+    fontSize: 15,
+    color: colors.textLight,
+    textAlign: 'center',
+  },
+  inputContainer: {
+    marginBottom: 32,
+  },
+  phoneInputWrapper: {
+    flexDirection: 'row',
+    backgroundColor: colors.surface,
+    borderRadius: 16,
+    overflow: 'hidden',
+    borderWidth: 2,
+    borderColor: colors.border,
+  },
+  countryCode: {
+    paddingHorizontal: 16,
+    justifyContent: 'center',
+    backgroundColor: colors.primaryLight,
+  },
+  countryCodeText: {
+    fontSize: 16,
     fontWeight: '600',
+    color: colors.text,
+  },
+  phoneInput: {
+    flex: 1,
+    fontSize: 18,
+    fontWeight: '600',
+    color: colors.text,
+    paddingVertical: 18,
+    paddingHorizontal: 16,
+  },
+  textInput: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: colors.text,
+    paddingVertical: 18,
+    paddingHorizontal: 20,
+    backgroundColor: colors.surface,
+    borderRadius: 16,
+    borderWidth: 2,
+    borderColor: colors.border,
+  },
+  otpContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 24,
+  },
+  otpInput: {
+    width: 50,
+    height: 60,
+    borderRadius: 12,
+    backgroundColor: colors.surface,
+    borderWidth: 2,
+    borderColor: colors.border,
+    fontSize: 24,
+    fontWeight: '700',
+    color: colors.text,
+    textAlign: 'center',
+  },
+  resendButton: {
+    alignSelf: 'center',
+    marginBottom: 32,
+  },
+  resendText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: colors.primary,
+  },
+  continueButton: {
+    backgroundColor: colors.border,
+    paddingVertical: 18,
+    borderRadius: 16,
+    alignItems: 'center',
+  },
+  continueButtonActive: {
+    backgroundColor: colors.primary,
+    shadowColor: colors.shadow,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 1,
+    shadowRadius: 12,
+    elevation: 5,
+  },
+  continueButtonText: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    letterSpacing: 0.5,
   },
 });

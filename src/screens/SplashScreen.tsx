@@ -1,6 +1,6 @@
-// src/screens/SplashScreen.tsx
 import React, { useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, Animated, Easing } from 'react-native';
+import { colors } from '../theme/colors';
 
 interface SplashScreenProps {
   onFinish: () => void;
@@ -8,102 +8,66 @@ interface SplashScreenProps {
 
 export const SplashScreen: React.FC<SplashScreenProps> = ({ onFinish }) => {
   const fadeAnim = useRef(new Animated.Value(0)).current;
-  const scaleAnim = useRef(new Animated.Value(0.3)).current;
-  const rotateAnim = useRef(new Animated.Value(0)).current;
-  const dropAnim = useRef(new Animated.Value(-100)).current;
-  const rippleScale1 = useRef(new Animated.Value(0)).current;
-  const rippleScale2 = useRef(new Animated.Value(0)).current;
-  const rippleScale3 = useRef(new Animated.Value(0)).current;
-  const rippleOpacity1 = useRef(new Animated.Value(0.6)).current;
-  const rippleOpacity2 = useRef(new Animated.Value(0.6)).current;
-  const rippleOpacity3 = useRef(new Animated.Value(0.6)).current;
+  const scaleAnim = useRef(new Animated.Value(0.5)).current;
+  const dropletAnim = useRef(new Animated.Value(-100)).current;
+  const waveAnim1 = useRef(new Animated.Value(0)).current;
+  const waveAnim2 = useRef(new Animated.Value(0)).current;
+  const waveAnim3 = useRef(new Animated.Value(0)).current;
   const textFade = useRef(new Animated.Value(0)).current;
   const textSlide = useRef(new Animated.Value(30)).current;
 
   useEffect(() => {
-    // Sequence of animations
-    Animated.sequence([
-      // Drop animation
-      Animated.timing(dropAnim, {
-        toValue: 0,
-        duration: 800,
-        easing: Easing.bounce,
-        useNativeDriver: true,
-      }),
-      // Ripple effect
-      Animated.parallel([
-        // First ripple
-        Animated.parallel([
-          Animated.timing(rippleScale1, {
-            toValue: 2,
-            duration: 1000,
+    // Wave animations
+    const createWave = (animValue: Animated.Value, delay: number) => {
+      return Animated.loop(
+        Animated.sequence([
+          Animated.delay(delay),
+          Animated.timing(animValue, {
+            toValue: 1,
+            duration: 2000,
             useNativeDriver: true,
           }),
-          Animated.timing(rippleOpacity1, {
+          Animated.timing(animValue, {
             toValue: 0,
-            duration: 1000,
+            duration: 0,
             useNativeDriver: true,
           }),
-        ]),
-        // Second ripple (delayed)
-        Animated.sequence([
-          Animated.delay(200),
-          Animated.parallel([
-            Animated.timing(rippleScale2, {
-              toValue: 2,
-              duration: 1000,
-              useNativeDriver: true,
-            }),
-            Animated.timing(rippleOpacity2, {
-              toValue: 0,
-              duration: 1000,
-              useNativeDriver: true,
-            }),
-          ]),
-        ]),
-        // Third ripple (delayed)
-        Animated.sequence([
-          Animated.delay(400),
-          Animated.parallel([
-            Animated.timing(rippleScale3, {
-              toValue: 2,
-              duration: 1000,
-              useNativeDriver: true,
-            }),
-            Animated.timing(rippleOpacity3, {
-              toValue: 0,
-              duration: 1000,
-              useNativeDriver: true,
-            }),
-          ]),
-        ]),
-        // Icon fade and scale
-        Animated.parallel([
-          Animated.timing(fadeAnim, {
-            toValue: 1,
-            duration: 600,
-            useNativeDriver: true,
-          }),
-          Animated.spring(scaleAnim, {
-            toValue: 1,
-            friction: 3,
-            tension: 40,
-            useNativeDriver: true,
-          }),
-        ]),
-        // Rotation
-        Animated.timing(rotateAnim, {
+        ])
+      );
+    };
+
+    Animated.parallel([
+      createWave(waveAnim1, 0),
+      createWave(waveAnim2, 400),
+      createWave(waveAnim3, 800),
+    ]).start();
+
+    // Main sequence
+    Animated.sequence([
+      Animated.parallel([
+        Animated.spring(dropletAnim, {
+          toValue: 0,
+          friction: 5,
+          tension: 40,
+          useNativeDriver: true,
+        }),
+        Animated.timing(fadeAnim, {
           toValue: 1,
-          duration: 1200,
-          easing: Easing.out(Easing.cubic),
+          duration: 800,
+          useNativeDriver: true,
+        }),
+        Animated.spring(scaleAnim, {
+          toValue: 1,
+          friction: 3,
+          tension: 40,
           useNativeDriver: true,
         }),
       ]),
-      // Text animations
+      Animated.delay(400),
       Animated.parallel([
         Animated.timing(textFade, {
           toValue: 1,
-          duration: 500,
+          duration: 600,
           useNativeDriver: true,
         }),
         Animated.spring(textSlide, {
@@ -114,97 +78,107 @@ export const SplashScreen: React.FC<SplashScreenProps> = ({ onFinish }) => {
       ]),
     ]).start();
 
-    // Auto-hide after animations complete
     const timer = setTimeout(() => {
       Animated.parallel([
         Animated.timing(fadeAnim, {
           toValue: 0,
-          duration: 400,
+          duration: 500,
           useNativeDriver: true,
         }),
         Animated.timing(textFade, {
           toValue: 0,
-          duration: 400,
+          duration: 500,
           useNativeDriver: true,
         }),
-      ]).start(() => {
-        onFinish();
-      });
+      ]).start(() => onFinish());
     }, 3000);
 
     return () => clearTimeout(timer);
   }, []);
 
-  const spin = rotateAnim.interpolate({
+  const wave1Scale = waveAnim1.interpolate({
     inputRange: [0, 1],
-    outputRange: ['0deg', '360deg'],
+    outputRange: [1, 2.5],
+  });
+
+  const wave1Opacity = waveAnim1.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0.6, 0],
+  });
+
+  const wave2Scale = waveAnim2.interpolate({
+    inputRange: [0, 1],
+    outputRange: [1, 2.5],
+  });
+
+  const wave2Opacity = waveAnim2.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0.5, 0],
+  });
+
+  const wave3Scale = waveAnim3.interpolate({
+    inputRange: [0, 1],
+    outputRange: [1, 2.5],
+  });
+
+  const wave3Opacity = waveAnim3.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0.4, 0],
   });
 
   return (
     <View style={styles.container}>
-      {/* Ripple effects */}
+      {/* Animated waves */}
       <Animated.View
         style={[
-          styles.ripple,
+          styles.wave,
           {
-            transform: [{ scale: rippleScale1 }],
-            opacity: rippleOpacity1,
+            transform: [{ scale: wave1Scale }],
+            opacity: wave1Opacity,
           },
         ]}
       />
       <Animated.View
         style={[
-          styles.ripple,
+          styles.wave,
           {
-            transform: [{ scale: rippleScale2 }],
-            opacity: rippleOpacity2,
+            transform: [{ scale: wave2Scale }],
+            opacity: wave2Opacity,
           },
         ]}
       />
       <Animated.View
         style={[
-          styles.ripple,
+          styles.wave,
           {
-            transform: [{ scale: rippleScale3 }],
-            opacity: rippleOpacity3,
+            transform: [{ scale: wave3Scale }],
+            opacity: wave3Opacity,
           },
         ]}
       />
 
-      {/* Drop animation container */}
+      {/* Droplet container */}
       <Animated.View
         style={{
-          transform: [{ translateY: dropAnim }],
+          transform: [{ translateY: dropletAnim }],
         }}
       >
-        {/* Main icon container with animations */}
         <Animated.View
           style={[
             styles.iconContainer,
             {
               opacity: fadeAnim,
-              transform: [
-                { scale: scaleAnim },
-                { rotate: spin },
-              ],
+              transform: [{ scale: scaleAnim }],
             },
           ]}
         >
-          <Text style={styles.icon}>💧</Text>
-          
-          {/* Shimmer effect */}
-          <Animated.View
-            style={[
-              styles.shimmer,
-              {
-                opacity: fadeAnim,
-              },
-            ]}
-          />
+          <View style={styles.dropletGlow}>
+            <Text style={styles.droplet}>💧</Text>
+          </View>
         </Animated.View>
       </Animated.View>
 
-      {/* Text animations */}
+      {/* Text */}
       <Animated.View
         style={{
           opacity: textFade,
@@ -212,35 +186,29 @@ export const SplashScreen: React.FC<SplashScreenProps> = ({ onFinish }) => {
         }}
       >
         <Text style={styles.appName}>Mizu</Text>
-        <Text style={styles.tagline}>Track. Plan. Thrive.</Text>
+        <Text style={styles.tagline}>Flow with your finances</Text>
       </Animated.View>
 
-      {/* Loading dots */}
-      <Animated.View
-        style={[
-          styles.loadingContainer,
-          { opacity: textFade },
-        ]}
-      >
+      {/* Loading indicator */}
+      <Animated.View style={[styles.loadingContainer, { opacity: textFade }]}>
         <LoadingDots />
       </Animated.View>
     </View>
   );
 };
 
-// Animated loading dots component
-const LoadingDots: React.FC = () => {
+const LoadingDots = () => {
   const dot1 = useRef(new Animated.Value(0)).current;
   const dot2 = useRef(new Animated.Value(0)).current;
   const dot3 = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    const createAnimation = (animValue: Animated.Value, delay: number) => {
+    const createDotAnimation = (animValue: Animated.Value, delay: number) => {
       return Animated.loop(
         Animated.sequence([
           Animated.delay(delay),
           Animated.timing(animValue, {
-            toValue: 1,
+            toValue: -10,
             duration: 400,
             useNativeDriver: true,
           }),
@@ -253,22 +221,18 @@ const LoadingDots: React.FC = () => {
       );
     };
 
-    const animations = Animated.parallel([
-      createAnimation(dot1, 0),
-      createAnimation(dot2, 200),
-      createAnimation(dot3, 400),
-    ]);
-
-    animations.start();
-
-    return () => animations.stop();
+    Animated.parallel([
+      createDotAnimation(dot1, 0),
+      createDotAnimation(dot2, 150),
+      createDotAnimation(dot3, 300),
+    ]).start();
   }, []);
 
   return (
     <View style={styles.dotsContainer}>
-      <Animated.View style={[styles.dot, { opacity: dot1 }]} />
-      <Animated.View style={[styles.dot, { opacity: dot2 }]} />
-      <Animated.View style={[styles.dot, { opacity: dot3 }]} />
+      <Animated.View style={[styles.dot, { transform: [{ translateY: dot1 }] }]} />
+      <Animated.View style={[styles.dot, { transform: [{ translateY: dot2 }] }]} />
+      <Animated.View style={[styles.dot, { transform: [{ translateY: dot3 }] }]} />
     </View>
   );
 };
@@ -276,64 +240,59 @@ const LoadingDots: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#457B9D',
+    backgroundColor: colors.primary,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  ripple: {
+  wave: {
     position: 'absolute',
-    width: 200,
-    height: 200,
-    borderRadius: 100,
-    backgroundColor: 'rgba(255, 255, 255, 0.3)',
+    width: 250,
+    height: 250,
+    borderRadius: 125,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
     borderWidth: 2,
-    borderColor: 'rgba(255, 255, 255, 0.5)',
+    borderColor: 'rgba(255, 255, 255, 0.3)',
   },
   iconContainer: {
-    width: 140,
-    height: 140,
-    borderRadius: 70,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    marginBottom: 40,
+  },
+  dropletGlow: {
+    width: 160,
+    height: 160,
+    borderRadius: 80,
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 32,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.3,
-    shadowRadius: 20,
+    shadowOffset: { width: 0, height: 15 },
+    shadowOpacity: 0.25,
+    shadowRadius: 25,
     elevation: 10,
   },
-  shimmer: {
-    position: 'absolute',
-    width: 140,
-    height: 140,
-    borderRadius: 70,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-  },
-  icon: {
-    fontSize: 72,
+  droplet: {
+    fontSize: 80,
   },
   appName: {
-    fontSize: 56,
-    fontWeight: '700',
+    fontSize: 64,
+    fontWeight: '800',
     color: '#FFFFFF',
-    marginBottom: 12,
-    letterSpacing: -2,
+    marginBottom: 8,
+    letterSpacing: -3,
     textAlign: 'center',
-    textShadowColor: 'rgba(0, 0, 0, 0.3)',
-    textShadowOffset: { width: 0, height: 2 },
-    textShadowRadius: 8,
+    textShadowColor: 'rgba(0, 0, 0, 0.2)',
+    textShadowOffset: { width: 0, height: 3 },
+    textShadowRadius: 10,
   },
   tagline: {
     fontSize: 18,
-    color: 'rgba(255, 255, 255, 0.9)',
+    color: 'rgba(255, 255, 255, 0.95)',
     fontWeight: '500',
     textAlign: 'center',
-    letterSpacing: 1,
+    letterSpacing: 2,
   },
   loadingContainer: {
     position: 'absolute',
-    bottom: 80,
+    bottom: 100,
   },
   dotsContainer: {
     flexDirection: 'row',
@@ -341,10 +300,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   dot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
+    width: 10,
+    height: 10,
+    borderRadius: 5,
     backgroundColor: '#FFFFFF',
-    marginHorizontal: 4,
+    marginHorizontal: 6,
   },
 });

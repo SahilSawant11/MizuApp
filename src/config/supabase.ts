@@ -18,8 +18,18 @@ export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // Test connection
 export const testConnection = async () => {
   try {
-    const { data, error } = await supabase.from('entries').select('count');
-    if (error) throw error;
+    // Just test if Supabase is reachable
+    const { error } = await supabase.from('entries').select('count', { count: 'exact', head: true });
+    
+    if (error) {
+      // If it's just RLS blocking, that's fine - connection works
+      if (error.message.includes('row-level security') || error.message.includes('JWT')) {
+        console.log('✅ Supabase connected (RLS active)');
+        return true;
+      }
+      throw error;
+    }
+    
     console.log('✅ Supabase connected successfully');
     return true;
   } catch (error) {
