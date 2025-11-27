@@ -2,6 +2,7 @@
 import React, { createContext, useState, useEffect, useContext } from 'react';
 import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '../config/supabase';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 interface AuthContextType {
   session: Session | null;
@@ -24,18 +25,46 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   useEffect(() => {
     // Get initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      setLoading(false);
-    });
-
-    // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (_event, session) => {
+    const initializeAuth = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
         setSession(session);
         setUser(session?.user ?? null);
         setLoading(false);
+        
+        console.log('🔍 Initial auth state:', {
+          hasSession: !!session,
+          userId: session?.user?.id?.substring(0, 8),
+        });
+      } catch (error) {
+        console.error('❌ Error initializing auth:', error);
+        setLoading(false);
+      }
+    };
+
+    initializeAuth();
+
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        console.log('🔄 Auth state changed:', event, session?.user?.id?.substring(0, 8));
+        
+        setSession(session);
+        setUser(session?.user ?? null);
+        setLoading(false);
+
+        // Handle session persistence
+        if (session) {
+          // Session exists - store it
+          await AsyncStorage.setItem('@mizu_user_session', JSON.stringify({
+            access_token: session.access_token,
+            refresh_token: session.refresh_token,
+            user_id: session.user.id,
+          }));
+        } else {
+          // No session - clear storage
+          await AsyncStorage.removeItem('@mizu_user_session');
+        }
       }
     );
 
@@ -43,7 +72,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   const signOut = async () => {
-    await supabase.auth.signOut();
+    try {
+      await AsyncStorage.removeItem('@mizu_user_session');
+      await AsyncStorage.removeItem('@mizu_user_data');
+      await supabase.auth.signOut();
+    } catch (error) {
+      console.error('❌ Error signing out:', error);
+    }
   };
 
   return (

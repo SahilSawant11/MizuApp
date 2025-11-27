@@ -1,4 +1,8 @@
-// src/screens/PinAuthScreen.tsx
+// ==============================================
+// Updated PinAuthScreen.tsx
+// This version creates ONE persistent anonymous user
+// ==============================================
+
 import React, { useState, useRef, useEffect } from 'react';
 import {
   View,
@@ -18,54 +22,78 @@ interface PinAuthScreenProps {
 
 type AuthMode = 'welcome' | 'setup' | 'confirm' | 'enter';
 
-const STORAGE_KEY = '@mizu_pin_hash';
+const STORAGE_KEY_PIN = '@mizu_pin_hash';
+const STORAGE_KEY_USER = '@mizu_user_session';
 
 export const PinAuthScreen: React.FC<PinAuthScreenProps> = ({ onAuthSuccess }) => {
   const [mode, setMode] = useState<AuthMode>('welcome');
   const [pin, setPin] = useState('');
   const [setupPin, setSetupPin] = useState('');
   const [loading, setLoading] = useState(false);
-  const [hasExistingPin, setHasExistingPin] = useState(false);
 
   const shakeAnim = useRef(new Animated.Value(0)).current;
   const fadeAnim = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
-    checkExistingPin();
+    checkExistingSetup();
   }, []);
 
-  const checkExistingPin = async () => {
+  const checkExistingSetup = async () => {
     try {
-      const storedPin = await AsyncStorage.getItem(STORAGE_KEY);
-      if (storedPin) {
-        setHasExistingPin(true);
+      const storedPin = await AsyncStorage.getItem(STORAGE_KEY_PIN);
+      const storedSession = await AsyncStorage.getItem(STORAGE_KEY_USER);
+      
+      console.log('🔍 Checking existing setup:', { hasPin: !!storedPin, hasSession: !!storedSession });
+      
+      if (storedPin && storedSession) {
+        // User has both PIN and session - show PIN entry
+        const sessionData = JSON.parse(storedSession);
+        
+        // Restore the session in Supabase
+        const { error } = await supabase.auth.setSession({
+          access_token: sessionData.access_token,
+          refresh_token: sessionData.refresh_token,
+        });
+        
+        if (!error) {
+          console.log('✅ Session restored, showing PIN entry');
+          setMode('enter');
+        } else {
+          console.log('⚠️ Session expired, need to re-authenticate');
+          setMode('welcome');
+        }
+      } else if (storedPin && !storedSession) {
+        // Has PIN but no session - show PIN entry to re-authenticate
+        console.log('⚠️ Has PIN but no session');
         setMode('enter');
+      } else {
+        // First time user
+        console.log('👤 First time user');
+        setMode('welcome');
       }
     } catch (error) {
-      console.error('Error checking PIN:', error);
+      console.error('❌ Error checking setup:', error);
+      setMode('welcome');
     }
   };
 
-  // Simple hash function for React Native (works on iOS & Android)
   const hashPin = (pinValue: string): string => {
     let hash = 0;
     for (let i = 0; i < pinValue.length; i++) {
       const char = pinValue.charCodeAt(i);
       hash = ((hash << 5) - hash) + char;
-      hash = hash & hash; // Convert to 32-bit integer
+      hash = hash & hash;
     }
     return hash.toString();
   };
 
   const verifyPin = async (enteredPin: string): Promise<boolean> => {
     try {
-      const storedHash = await AsyncStorage.getItem(STORAGE_KEY);
+      const storedHash = await AsyncStorage.getItem(STORAGE_KEY_PIN);
       if (!storedHash) return false;
-      
-      // Compare the hashed PINs
       return hashPin(enteredPin) === storedHash;
     } catch (error) {
-      console.error('Error verifying PIN:', error);
+      console.error('❌ Error verifying PIN:', error);
       return false;
     }
   };
@@ -73,10 +101,27 @@ export const PinAuthScreen: React.FC<PinAuthScreenProps> = ({ onAuthSuccess }) =
   const savePin = async (pinValue: string) => {
     try {
       const hash = hashPin(pinValue);
-      await AsyncStorage.setItem(STORAGE_KEY, hash);
+      await AsyncStorage.setItem(STORAGE_KEY_PIN, hash);
+      console.log('✅ PIN saved');
     } catch (error) {
-      console.error('Error saving PIN:', error);
+      console.error('❌ Error saving PIN:', error);
       throw error;
+    }
+  };
+
+  const saveSession = async () => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        await AsyncStorage.setItem(STORAGE_KEY_USER, JSON.stringify({
+          access_token: session.access_token,
+          refresh_token: session.refresh_token,
+          user_id: session.user.id,
+        }));
+        console.log('✅ Session saved:', session.user.id);
+      }
+    } catch (error) {
+      console.error('❌ Error saving session:', error);
     }
   };
 
@@ -100,7 +145,6 @@ export const PinAuthScreen: React.FC<PinAuthScreenProps> = ({ onAuthSuccess }) =
         const newPin = pin + num;
         setPin(newPin);
         
-        // Auto-verify when PIN is complete
         if (newPin.length >= 3 && newPin.length <= 6) {
           if (newPin === setupPin) {
             handleConfirmPin(newPin);
@@ -112,7 +156,6 @@ export const PinAuthScreen: React.FC<PinAuthScreenProps> = ({ onAuthSuccess }) =
         const newPin = pin + num;
         setPin(newPin);
         
-        // Auto-verify when PIN is complete
         if (newPin.length >= 3) {
           handleEnterPin(newPin);
         }
@@ -154,19 +197,44 @@ export const PinAuthScreen: React.FC<PinAuthScreenProps> = ({ onAuthSuccess }) =
 
     setLoading(true);
     try {
-      // Save PIN locally
+      // Save PIN first
       await savePin(confirmedPin);
+      console.log('✅ PIN confirmed and saved');
 
-      // Create anonymous user in Supabase
+      // Check if session already exists
+      const storedSession = await AsyncStorage.getItem(STORAGE_KEY_USER);
+      
+      if (storedSession) {
+        // Restore existing session
+        const sessionData = JSON.parse(storedSession);
+        const { error } = await supabase.auth.setSession({
+          access_token: sessionData.access_token,
+          refresh_token: sessionData.refresh_token,
+        });
+        
+        if (!error) {
+          console.log('✅ Existing session restored');
+          Vibration.vibrate(50);
+          onAuthSuccess();
+          return;
+        }
+      }
+
+      // Create new anonymous user (ONLY if no existing session)
+      console.log('🆕 Creating new anonymous user...');
       const { data, error } = await supabase.auth.signInAnonymously();
       
       if (error) throw error;
 
+      console.log('✅ New user created:', data.user?.id);
+      
+      // Save the new session
+      await saveSession();
+
       Vibration.vibrate(50);
-      Alert.alert('Success!', 'Your PIN has been set up successfully', [
-        { text: 'OK', onPress: onAuthSuccess }
-      ]);
+      onAuthSuccess();
     } catch (error: any) {
+      console.error('❌ Setup error:', error);
       Alert.alert('Error', error.message);
       setPin('');
       setSetupPin('');
@@ -189,19 +257,75 @@ export const PinAuthScreen: React.FC<PinAuthScreenProps> = ({ onAuthSuccess }) =
         return;
       }
 
-      // Sign in to Supabase
+      console.log('✅ PIN verified');
+
+      // Try to restore existing session
+      const storedSession = await AsyncStorage.getItem(STORAGE_KEY_USER);
+      
+      if (storedSession) {
+        const sessionData = JSON.parse(storedSession);
+        console.log('🔄 Restoring session for user:', sessionData.user_id);
+        
+        const { error } = await supabase.auth.setSession({
+          access_token: sessionData.access_token,
+          refresh_token: sessionData.refresh_token,
+        });
+        
+        if (!error) {
+          console.log('✅ Session restored successfully');
+          Vibration.vibrate(50);
+          onAuthSuccess();
+          return;
+        }
+        
+        console.log('⚠️ Session expired, creating new one');
+      }
+
+      // If session restoration failed, create new anonymous user
+      console.log('🆕 Creating new session...');
       const { data, error } = await supabase.auth.signInAnonymously();
       
       if (error) throw error;
 
+      console.log('✅ New session created:', data.user?.id);
+      await saveSession();
+
       Vibration.vibrate(50);
       onAuthSuccess();
     } catch (error: any) {
+      console.error('❌ Login error:', error);
       Alert.alert('Error', error.message);
       setPin('');
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleReset = async () => {
+    Alert.alert(
+      'Reset App',
+      'This will clear your PIN and all data. Are you sure?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Reset',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await AsyncStorage.removeItem(STORAGE_KEY_PIN);
+              await AsyncStorage.removeItem(STORAGE_KEY_USER);
+              await supabase.auth.signOut();
+              setPin('');
+              setSetupPin('');
+              setMode('welcome');
+              console.log('✅ App reset complete');
+            } catch (error) {
+              console.error('❌ Reset error:', error);
+            }
+          },
+        },
+      ]
+    );
   };
 
   const renderPinDots = () => {
@@ -330,27 +454,7 @@ export const PinAuthScreen: React.FC<PinAuthScreenProps> = ({ onAuthSuccess }) =
         {mode === 'enter' && (
           <TouchableOpacity
             style={styles.resetButton}
-            onPress={async () => {
-              Alert.alert(
-                'Reset PIN',
-                'This will clear your PIN. You will need to set it up again.',
-                [
-                  { text: 'Cancel', style: 'cancel' },
-                  {
-                    text: 'Reset',
-                    style: 'destructive',
-                    onPress: async () => {
-                      await AsyncStorage.removeItem(STORAGE_KEY);
-                      await supabase.auth.signOut();
-                      setPin('');
-                      setSetupPin('');
-                      setMode('welcome');
-                      setHasExistingPin(false);
-                    },
-                  },
-                ]
-              );
-            }}
+            onPress={handleReset}
           >
             <Text style={styles.resetButtonText}>Forgot PIN?</Text>
           </TouchableOpacity>
@@ -363,7 +467,7 @@ export const PinAuthScreen: React.FC<PinAuthScreenProps> = ({ onAuthSuccess }) =
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#F8FFF9',
   },
   content: {
     flex: 1,
@@ -375,13 +479,13 @@ const styles = StyleSheet.create({
     width: 120,
     height: 120,
     borderRadius: 60,
-    backgroundColor: '#457B9D',
+    backgroundColor: '#6BCF9F',
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 32,
-    shadowColor: '#000',
+    shadowColor: 'rgba(107, 207, 159, 0.3)',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
+    shadowOpacity: 1,
     shadowRadius: 12,
     elevation: 8,
   },
@@ -391,25 +495,25 @@ const styles = StyleSheet.create({
   welcomeTitle: {
     fontSize: 32,
     fontWeight: '700',
-    color: '#000',
+    color: '#1A3A2E',
     marginBottom: 12,
     textAlign: 'center',
   },
   welcomeSubtitle: {
     fontSize: 16,
-    color: '#666',
+    color: '#5F7A6F',
     textAlign: 'center',
     marginBottom: 48,
     paddingHorizontal: 20,
   },
   getStartedButton: {
-    backgroundColor: '#457B9D',
+    backgroundColor: '#6BCF9F',
     paddingVertical: 16,
     paddingHorizontal: 64,
     borderRadius: 12,
-    shadowColor: '#457B9D',
+    shadowColor: 'rgba(107, 207, 159, 0.3)',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
+    shadowOpacity: 1,
     shadowRadius: 8,
     elevation: 4,
     marginBottom: 24,
@@ -421,7 +525,7 @@ const styles = StyleSheet.create({
   },
   secureText: {
     fontSize: 14,
-    color: '#999',
+    color: '#9DB4A8',
     marginTop: 16,
   },
   pinContainer: {
@@ -433,13 +537,13 @@ const styles = StyleSheet.create({
   pinTitle: {
     fontSize: 28,
     fontWeight: '700',
-    color: '#000',
+    color: '#1A3A2E',
     marginBottom: 8,
     textAlign: 'center',
   },
   pinSubtitle: {
     fontSize: 16,
-    color: '#666',
+    color: '#5F7A6F',
     marginBottom: 48,
     textAlign: 'center',
   },
@@ -453,13 +557,13 @@ const styles = StyleSheet.create({
     height: 16,
     borderRadius: 8,
     borderWidth: 2,
-    borderColor: '#E0E0E0',
+    borderColor: '#D4E8DD',
     marginHorizontal: 8,
     backgroundColor: '#FFFFFF',
   },
   pinDotFilled: {
-    backgroundColor: '#457B9D',
-    borderColor: '#457B9D',
+    backgroundColor: '#6BCF9F',
+    borderColor: '#6BCF9F',
   },
   numberPad: {
     width: '100%',
@@ -474,21 +578,26 @@ const styles = StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: 40,
-    backgroundColor: '#F5F5F5',
+    backgroundColor: '#FFFFFF',
     justifyContent: 'center',
     alignItems: 'center',
+    shadowColor: 'rgba(107, 207, 159, 0.15)',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 1,
+    shadowRadius: 4,
+    elevation: 2,
   },
   numberText: {
     fontSize: 32,
     fontWeight: '300',
-    color: '#000',
+    color: '#1A3A2E',
   },
   backspaceText: {
     fontSize: 28,
-    color: '#666',
+    color: '#5F7A6F',
   },
   continueButton: {
-    backgroundColor: '#457B9D',
+    backgroundColor: '#6BCF9F',
     paddingVertical: 16,
     paddingHorizontal: 48,
     borderRadius: 12,
@@ -505,7 +614,7 @@ const styles = StyleSheet.create({
   },
   resetButtonText: {
     fontSize: 16,
-    color: '#457B9D',
+    color: '#6BCF9F',
     fontWeight: '600',
   },
 });

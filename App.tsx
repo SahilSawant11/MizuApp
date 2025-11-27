@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, ActivityIndicator } from 'react-native';
 import { testConnection } from './src/config/supabase';
 import { HomeScreen } from './src/screens/HomeScreen';
 import { SplashScreen } from './src/screens/SplashScreen';
-import { PinAuthScreen } from './src/screens/PinAuthScreen';
+import { AuthScreen } from './src/screens/AuthScreen';
 import { AuthProvider, useAuth } from './src/contexts/AuthContext';
 
 function AppContent() {
@@ -69,10 +69,10 @@ function AppContent() {
     );
   }
 
-  // Show PIN auth screen if not logged in
+  // Show auth screen if not logged in
   if (!user) {
-    console.log('👤 No user found, showing PIN auth screen');
-    return <PinAuthScreen onAuthSuccess={() => console.log('✅ Auth success!')} />;
+    console.log('👤 No user found, showing auth screen');
+    return <AuthScreen onAuthSuccess={() => console.log('✅ Auth success!')} />;
   }
 
   // Show main app
