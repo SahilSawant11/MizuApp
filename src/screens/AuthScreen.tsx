@@ -52,42 +52,53 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess }) => {
     ]).start();
   }, [mode]);
 
-  const checkExistingSession = async () => {
-    try {
-      const session = await AsyncStorage.getItem(STORAGE_KEY_USER);
+const checkExistingSession = async () => {
+  try {
+    console.log('🔍 Checking existing session...');
+    const session = await AsyncStorage.getItem(STORAGE_KEY_USER);
+    
+    if (session) {
+      const sessionData = JSON.parse(session);
+      console.log('📱 Found session:', sessionData);
       
-      if (session) {
-        const sessionData = JSON.parse(session);
-        const { error } = await supabase.auth.setSession({
-          access_token: sessionData.access_token,
-          refresh_token: sessionData.refresh_token,
-        });
+      // Verify user still exists in database
+      const { data: user, error: userError } = await supabase
+        .from('users')
+        .select('id')
+        .eq('id', sessionData.user_id)
+        .single();
 
-        if (!error) {
-          console.log('✅ Auto-login successful');
-          onAuthSuccess();
-        }
-      }
-    } catch (error) {
-      console.error('❌ Session check error:', error);
-    }
-  };
+      console.log('👤 User verification result:', { user, userError });
 
-  const saveSession = async () => {
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session) {
-        await AsyncStorage.setItem(STORAGE_KEY_USER, JSON.stringify({
-          access_token: session.access_token,
-          refresh_token: session.refresh_token,
-          user_id: session.user.id,
-        }));
-        console.log('✅ Session saved');
+      if (user) {
+        console.log('✅ Auto-login successful');
+        onAuthSuccess();
+      } else {
+        console.log('❌ User no longer exists, clearing session');
+        await AsyncStorage.removeItem(STORAGE_KEY_USER);
       }
-    } catch (error) {
-      console.error('❌ Error saving session:', error);
+    } else {
+      console.log('❌ No session found');
     }
-  };
+  } catch (error) {
+    console.error('❌ Session check error:', error);
+    await AsyncStorage.removeItem(STORAGE_KEY_USER);
+  }
+};
+
+ const saveSession = async (userData: any) => {
+  try {
+    await AsyncStorage.setItem(STORAGE_KEY_USER, JSON.stringify({
+      user_id: userData.id,
+      mobile: userData.mobile,
+      username: userData.username,
+      logged_in_at: new Date().toISOString(),
+    }));
+    console.log('✅ Session saved');
+  } catch (error) {
+    console.error('❌ Error saving session:', error);
+  }
+};
 
   const hashPin = (pinValue: string): string => {
     // Simple hash function
@@ -100,189 +111,172 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onAuthSuccess }) => {
     return hash.toString();
   };
 
-  const handleRegister = async () => {
-    if (!username.trim() || !mobile || !pin) {
-      Alert.alert('Error', 'Please fill all fields');
+
+
+const handleRegister = async () => {
+  if (!username.trim() || !mobile || !pin) {
+    Alert.alert('Error', 'Please fill all fields');
+    return;
+  }
+
+  if (mobile.length !== 10) {
+    Alert.alert('Error', 'Please enter a valid 10-digit mobile number');
+    return;
+  }
+
+  if (pin.length < 4) {
+    Alert.alert('Error', 'PIN must be at least 4 digits');
+    return;
+  }
+
+  if (pin !== confirmPin) {
+    Alert.alert('Error', 'PINs do not match');
+    return;
+  }
+
+  setLoading(true);
+  
+  try {
+    const hashedPin = hashPin(pin);
+
+    console.log('🔄 Starting registration for mobile:', mobile);
+
+    // Check if mobile already exists
+    const { data: existingUser, error: checkError } = await supabase
+      .from('users')
+      .select('id')
+      .eq('mobile', mobile)
+      .maybeSingle();
+
+    if (existingUser) {
+      Alert.alert('Error', 'Mobile number already registered');
+      setLoading(false);
       return;
     }
 
-    if (mobile.length !== 10) {
-      Alert.alert('Error', 'Please enter a valid 10-digit mobile number');
-      return;
+    // Create user directly in your users table (no Supabase Auth)
+    const { data: newUser, error: insertError } = await supabase
+      .from('users')
+      .insert({
+        username: username.trim(),
+        mobile: mobile,
+        pin_hash: hashedPin,
+        full_name: username.trim(),
+        created_at: new Date().toISOString(),
+      })
+      .select()
+      .single();
+
+    if (insertError) {
+      console.error('❌ Database insert error:', insertError);
+      throw insertError;
     }
 
-    if (pin.length < 4) {
-      Alert.alert('Error', 'PIN must be at least 4 digits');
-      return;
-    }
+    console.log('✅ User created in database:', newUser.id);
 
-    if (pin !== confirmPin) {
-      Alert.alert('Error', 'PINs do not match');
-      return;
-    }
+    // Save user session in AsyncStorage
+    await AsyncStorage.setItem(STORAGE_KEY_USER, JSON.stringify({
+      user_id: newUser.id,
+      mobile: newUser.mobile,
+      username: newUser.username,
+      logged_in_at: new Date().toISOString(),
+    }));
 
-    setLoading(true);
-    try {
-      const email = `${mobile}@mizu.app`;
-      const hashedPin = hashPin(pin);
+    console.log('🎉 Registration complete!');
+    
+    Alert.alert(
+      'Success',
+      'Account created successfully!',
+      [{ text: 'OK', onPress: onAuthSuccess }]
+    );
 
-      console.log('🔄 Starting registration...');
+  } catch (error: any) {
+    console.error('❌ Registration error:', error);
+    Alert.alert(
+      'Registration Failed',
+      error.message || 'An error occurred during registration'
+    );
+  } finally {
+    setLoading(false);
+  }
+};
 
-      // STEP 1: Check if mobile already exists
-      const { data: existingUser, error: checkError } = await supabase
+const handleLogin = async () => {
+  if (!mobile || !pin) {
+    Alert.alert('Error', 'Please enter mobile number and PIN');
+    return;
+  }
+
+  if (mobile.length !== 10) {
+    Alert.alert('Error', 'Please enter a valid 10-digit mobile number');
+    return;
+  }
+
+  setLoading(true);
+  
+  try {
+    const hashedPin = hashPin(pin);
+
+    console.log('🔄 Attempting login...', { mobile, hashedPin });
+
+    // Check user in database directly
+    const { data: user, error: userError } = await supabase
+      .from('users')
+      .select('*')
+      .eq('mobile', mobile)
+      .eq('pin_hash', hashedPin)
+      .single();
+
+    console.log('🔍 Login query result:', { user, userError });
+
+    if (userError) {
+      console.error('❌ Database error:', userError);
+      
+      // Check if user exists but PIN is wrong
+      const { data: existingUser } = await supabase
         .from('users')
         .select('id')
         .eq('mobile', mobile)
         .single();
 
       if (existingUser) {
-        Alert.alert('Error', 'Mobile number already registered');
-        return;
+        Alert.alert('Error', 'Invalid PIN');
+      } else {
+        Alert.alert('Error', 'Mobile number not registered');
       }
-
-      // STEP 2: Create auth user
-      const { data: authData, error: authError } = await supabase.auth.signUp({
-        email: email,
-        password: hashedPin,
-      });
-
-      if (authError) {
-        console.error('❌ Auth error:', authError);
-        
-        // If user already exists, try to sign in
-        if (authError.message.includes('already registered')) {
-          await handleExistingUserLogin(mobile, pin);
-          return;
-        }
-        
-        throw authError;
-      }
-
-      console.log('✅ Auth user created:', authData.user?.id);
-
-      if (authData.user) {
-        // STEP 3: Create user profile
-        const { error: profileError } = await supabase
-          .from('users')
-          .insert({
-            id: authData.user.id,
-            username: username.trim(),
-            mobile: mobile,
-            pin_hash: hashedPin,
-            email: email,
-            full_name: username.trim(),
-            created_at: new Date().toISOString(),
-          });
-
-        if (profileError) {
-          console.error('❌ Profile error:', profileError);
-          throw profileError;
-        }
-
-        console.log('✅ User profile created');
-
-        // STEP 4: Sign in automatically
-        await handleLogin(mobile, pin);
-      }
-
-    } catch (error: any) {
-      console.error('❌ Registration error:', error);
-      Alert.alert('Error', error.message || 'Registration failed');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleLogin = async (loginMobile?: string, loginPin?: string) => {
-    const useMobile = loginMobile || mobile;
-    const usePin = loginPin || pin;
-
-    if (!useMobile || !usePin) {
-      Alert.alert('Error', 'Please enter mobile number and PIN');
       return;
     }
 
-    if (useMobile.length !== 10) {
-      Alert.alert('Error', 'Please enter a valid 10-digit mobile number');
+    if (!user) {
+      Alert.alert('Error', 'Invalid mobile number or PIN');
       return;
     }
 
-    setLoading(true);
-    try {
-      const email = `${useMobile}@mizu.app`;
-      const hashedPin = hashPin(usePin);
+    console.log('✅ Login successful:', user.id);
 
-      console.log('🔄 Attempting login...');
+    // Save session
+    await AsyncStorage.setItem(STORAGE_KEY_USER, JSON.stringify({
+      user_id: user.id,
+      mobile: user.mobile,
+      username: user.username,
+      logged_in_at: new Date().toISOString(),
+    }));
 
-      // STEP 1: Sign in with Supabase Auth
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email: email,
-        password: hashedPin,
-      });
+    console.log('💾 Session saved, calling onAuthSuccess...');
+    
+    // Clear form fields
+    setMobile('');
+    setPin('');
+    
+    onAuthSuccess();
 
-      if (error) {
-        console.error('❌ Login error:', error);
-        
-        // Check if user exists in our database but auth failed
-        const { data: dbUser } = await supabase
-          .from('users')
-          .select('id')
-          .eq('mobile', useMobile)
-          .single();
-
-        if (dbUser) {
-          Alert.alert('Error', 'Invalid PIN');
-        } else {
-          Alert.alert('Error', 'Mobile number not registered');
-        }
-        return;
-      }
-
-      console.log('✅ Login successful');
-
-      // STEP 2: Save session and proceed
-      await saveSession();
-      onAuthSuccess();
-
-    } catch (error: any) {
-      console.error('❌ Login error:', error);
-      Alert.alert('Error', error.message || 'Login failed');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleExistingUserLogin = async (existingMobile: string, existingPin: string) => {
-    // User exists in auth but we need to check if profile exists
-    const { data: profile } = await supabase
-      .from('users')
-      .select('id')
-      .eq('mobile', existingMobile)
-      .single();
-
-    if (!profile) {
-      // Create profile for existing auth user
-      const email = `${existingMobile}@mizu.app`;
-      const hashedPin = hashPin(existingPin);
-      
-      const { data: { user } } = await supabase.auth.getUser();
-      
-      if (user) {
-        await supabase.from('users').insert({
-          id: user.id,
-          username: username.trim(),
-          mobile: existingMobile,
-          pin_hash: hashedPin,
-          email: email,
-          full_name: username.trim(),
-          created_at: new Date().toISOString(),
-        });
-      }
-    }
-
-    // Now login
-    await handleLogin(existingMobile, existingPin);
-  };
+  } catch (error: any) {
+    console.error('❌ Login error:', error);
+    Alert.alert('Error', error.message || 'Login failed');
+  } finally {
+    setLoading(false);
+  }
+};
 
   const handleResetApp = async () => {
     Alert.alert(
