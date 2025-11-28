@@ -3,14 +3,12 @@ import { View, Text, StyleSheet, ActivityIndicator } from 'react-native';
 import { testConnection } from './src/config/supabase';
 import { HomeScreen } from './src/screens/HomeScreen';
 import { SplashScreen } from './src/screens/SplashScreen';
-import { AuthScreen } from './src/screens/AuthScreen';
 import { AuthProvider, useAuth } from './src/contexts/AuthContext';
 
 function AppContent() {
   const [isReady, setIsReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showSplash, setShowSplash] = useState(true);
-  const { user, loading: authLoading } = useAuth();
 
   useEffect(() => {
     const initializeApp = async () => {
@@ -33,17 +31,6 @@ function AppContent() {
     initializeApp();
   }, []);
 
-  // Debug logging
-  useEffect(() => {
-    console.log('🔍 Auth State:', {
-      hasUser: !!user,
-      userId: user?.id?.substring(0, 8),
-      authLoading,
-      isReady,
-      showSplash,
-    });
-  }, [user, authLoading, isReady, showSplash]);
-
   // Show splash screen
   if (showSplash) {
     return <SplashScreen onFinish={() => setShowSplash(false)} />;
@@ -59,8 +46,8 @@ function AppContent() {
     );
   }
 
-  // Show loading state while checking auth or initializing
-  if (!isReady || authLoading) {
+  // Show loading state while initializing
+  if (!isReady) {
     return (
       <View style={styles.centerContainer}>
         <ActivityIndicator size="large" color="#457B9D" />
@@ -69,14 +56,8 @@ function AppContent() {
     );
   }
 
-  // Show auth screen if not logged in
-  if (!user) {
-    console.log('👤 No user found, showing auth screen');
-    return <AuthScreen onAuthSuccess={() => console.log('✅ Auth success!')} />;
-  }
-
-  // Show main app
-  console.log('✅ User authenticated, showing home screen');
+  // Directly show HomeScreen after initialization
+  console.log('✅ App ready, showing home screen');
   return <HomeScreen />;
 }
 

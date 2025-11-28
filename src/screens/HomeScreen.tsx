@@ -12,8 +12,6 @@ import {
 import { Entry } from '../models/Entry';
 import { entryRepository } from '../database/entryRepo';
 import { useAuth } from '../contexts/AuthContext';
-import { DebugAuthHelper } from '../components/DebugAuthHelper';
-import { supabase } from '../config/supabase';
 
 export const HomeScreen: React.FC = () => {
   const [entries, setEntries] = useState<Entry[]>([]);
@@ -21,7 +19,7 @@ export const HomeScreen: React.FC = () => {
   const [expenses, setExpenses] = useState<Entry[]>([]);
   const [tasks, setTasks] = useState<Entry[]>([]);
   const [totalExpense, setTotalExpense] = useState(0);
-  const { user, signOut } = useAuth();
+  const { user } = useAuth();
 
   const loadEntries = useCallback(async () => {
     try {
@@ -39,13 +37,7 @@ export const HomeScreen: React.FC = () => {
       setTotalExpense(total);
     } catch (error: any) {
       console.error('Failed to load entries:', error);
-      if (error.message?.includes('Not authenticated')) {
-        Alert.alert(
-          'Authentication Error',
-          'You need to sign in again. Please use the debug tools below.',
-          [{ text: 'OK' }]
-        );
-      }
+      Alert.alert('Error', 'Failed to load entries. Please try again.');
     }
   }, []);
 
@@ -104,58 +96,29 @@ export const HomeScreen: React.FC = () => {
     }
   };
 
-  const handleSignOut = async () => {
-    Alert.alert(
-      'Sign Out',
-      'Are you sure you want to sign out? You will need to enter your PIN again.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Sign Out',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              const { error } = await supabase.auth.signOut();
-              if (error) throw error;
-              console.log('✅ Signed out successfully');
-              // The AuthContext will automatically detect this and redirect to PIN screen
-            } catch (error: any) {
-              console.error('❌ Sign out error:', error);
-              Alert.alert('Error', error.message || 'Failed to sign out');
-            }
-          },
-        },
-      ]
-    );
-  };
-
   return (
     <SafeAreaView style={styles.container}>
       {/* Header */}
       <View style={styles.headerBar}>
         <View>
           <Text style={styles.greeting}>Hello,</Text>
-          <Text style={styles.userName}>
-            {user?.user_metadata?.full_name || 'User'}
-          </Text>
+          <Text style={styles.userName}>Welcome!</Text>
         </View>
-        <TouchableOpacity style={styles.signOutButton} onPress={handleSignOut}>
-          <Text style={styles.signOutText}>Sign Out</Text>
-        </TouchableOpacity>
+        <View style={styles.logoContainer}>
+          <Text style={styles.logo}>💧</Text>
+        </View>
       </View>
 
       <ScrollView contentContainerStyle={styles.content}>
-        {/* Debug Helper - Only shows in DEV mode */}
-
         {/* Summary Section */}
         <View style={styles.summarySection}>
           <View style={styles.summaryItem}>
-            <Text style={styles.summaryLabel}>Expenses</Text>
+            <Text style={styles.summaryLabel}>Today's Expenses</Text>
             <Text style={styles.expenseAmount}>₹{totalExpense.toFixed(2)}</Text>
           </View>
           
           <View style={styles.summaryItem}>
-            <Text style={styles.summaryLabel}>Tasks</Text>
+            <Text style={styles.summaryLabel}>Tasks Logged</Text>
             <Text style={styles.taskCount}>{tasks.length}</Text>
           </View>
         </View>
@@ -167,31 +130,43 @@ export const HomeScreen: React.FC = () => {
             value={inputText}
             onChangeText={setInputText}
             placeholder="50 groceries or buy milk"
-            placeholderTextColor="#999"
+            placeholderTextColor="#9DB4A8"
             onSubmitEditing={handleAddEntry}
             returnKeyType="done"
           />
           <Text style={styles.hint}>
-            Include amount for expenses, or just text for tasks
+            💡 Include amount for expenses, or just text for tasks
           </Text>
         </View>
 
         {/* Expenses List */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Expenses</Text>
+          <Text style={styles.sectionTitle}>💸 Expenses</Text>
           {expenses.length === 0 ? (
-            <Text style={styles.emptyText}>No expenses</Text>
+            <View style={styles.emptyState}>
+              <Text style={styles.emptyIcon}>📝</Text>
+              <Text style={styles.emptyText}>No expenses yet</Text>
+              <Text style={styles.emptySubtext}>Add one by typing amount + description</Text>
+            </View>
           ) : (
             expenses.map(expense => (
               <View key={expense.id} style={styles.listItem}>
-                <Text style={styles.itemText}>{expense.title}</Text>
+                <View style={styles.itemLeft}>
+                  <Text style={styles.itemText}>{expense.title}</Text>
+                  <Text style={styles.itemTime}>
+                    {new Date(expense.created_at).toLocaleTimeString('en-US', {
+                      hour: '2-digit',
+                      minute: '2-digit',
+                    })}
+                  </Text>
+                </View>
                 <View style={styles.itemRight}>
                   <Text style={styles.itemAmount}>₹{expense.amount?.toFixed(2)}</Text>
                   <TouchableOpacity
                     onPress={() => handleDeleteEntry(expense.id!)}
                     style={styles.deleteButton}
                   >
-                    <Text style={styles.deleteIcon}>🗑️</Text>
+                    <Text style={styles.deleteIcon}>×</Text>
                   </TouchableOpacity>
                 </View>
               </View>
@@ -201,19 +176,33 @@ export const HomeScreen: React.FC = () => {
 
         {/* Tasks List */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Tasks</Text>
+          <Text style={styles.sectionTitle}>✓ Tasks</Text>
           {tasks.length === 0 ? (
-            <Text style={styles.emptyText}>No tasks</Text>
+            <View style={styles.emptyState}>
+              <Text style={styles.emptyIcon}>✅</Text>
+              <Text style={styles.emptyText}>No tasks yet</Text>
+              <Text style={styles.emptySubtext}>Add one by typing any text</Text>
+            </View>
           ) : (
             tasks.map(task => (
               <View key={task.id} style={styles.listItem}>
-                <View style={styles.checkbox} />
-                <Text style={styles.itemText}>{task.title}</Text>
+                <View style={styles.itemLeft}>
+                  <View style={styles.checkbox} />
+                  <View>
+                    <Text style={styles.itemText}>{task.title}</Text>
+                    <Text style={styles.itemTime}>
+                      {new Date(task.created_at).toLocaleTimeString('en-US', {
+                        hour: '2-digit',
+                        minute: '2-digit',
+                      })}
+                    </Text>
+                  </View>
+                </View>
                 <TouchableOpacity
                   onPress={() => handleDeleteEntry(task.id!)}
                   style={styles.deleteButton}
                 >
-                  <Text style={styles.deleteIcon}>🗑️</Text>
+                  <Text style={styles.deleteIcon}>×</Text>
                 </TouchableOpacity>
               </View>
             ))
@@ -227,131 +216,183 @@ export const HomeScreen: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#F8FFF9',
   },
   headerBar: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
+    paddingHorizontal: 24,
+    paddingVertical: 20,
+    backgroundColor: '#FFFFFF',
     borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0',
+    borderBottomColor: '#E8F5EE',
   },
   greeting: {
     fontSize: 14,
-    color: '#666',
+    color: '#5F7A6F',
+    marginBottom: 4,
   },
   userName: {
-    fontSize: 20,
+    fontSize: 24,
     fontWeight: '700',
-    color: '#000',
+    color: '#1A3A2E',
   },
-  signOutButton: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#E0E0E0',
+  logoContainer: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: '#E8F5EE',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  signOutText: {
-    fontSize: 14,
-    color: '#666',
-    fontWeight: '600',
+  logo: {
+    fontSize: 24,
   },
   content: {
-    padding: 20,
+    padding: 24,
     paddingBottom: 40,
   },
   summarySection: {
     marginBottom: 32,
   },
   summaryItem: {
-    marginBottom: 20,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 20,
+    marginBottom: 16,
+    shadowColor: 'rgba(107, 207, 159, 0.1)',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 1,
+    shadowRadius: 8,
+    elevation: 2,
   },
   summaryLabel: {
-    fontSize: 16,
-    color: '#666',
+    fontSize: 14,
+    color: '#5F7A6F',
     marginBottom: 8,
+    fontWeight: '600',
   },
   expenseAmount: {
-    fontSize: 56,
-    fontWeight: '300',
-    color: '#000',
+    fontSize: 48,
+    fontWeight: '700',
+    color: '#1A3A2E',
     letterSpacing: -2,
   },
   taskCount: {
-    fontSize: 56,
-    fontWeight: '300',
-    color: '#000',
+    fontSize: 48,
+    fontWeight: '700',
+    color: '#1A3A2E',
   },
   inputSection: {
     marginBottom: 32,
   },
   input: {
     fontSize: 16,
-    color: '#000',
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderWidth: 1,
-    borderColor: '#E0E0E0',
-    borderRadius: 8,
+    color: '#1A3A2E',
+    paddingVertical: 16,
+    paddingHorizontal: 20,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: '#E8F5EE',
     marginBottom: 8,
-    backgroundColor: '#FAFAFA',
+    fontWeight: '500',
   },
   hint: {
     fontSize: 13,
-    color: '#999',
+    color: '#9DB4A8',
     paddingLeft: 4,
   },
   section: {
     marginBottom: 32,
   },
   sectionTitle: {
-    fontSize: 22,
-    fontWeight: '600',
-    color: '#000',
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#1A3A2E',
     marginBottom: 16,
+  },
+  emptyState: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    padding: 40,
+    alignItems: 'center',
+  },
+  emptyIcon: {
+    fontSize: 48,
+    marginBottom: 12,
   },
   emptyText: {
     fontSize: 16,
-    color: '#999',
+    fontWeight: '600',
+    color: '#5F7A6F',
+    marginBottom: 4,
+  },
+  emptySubtext: {
+    fontSize: 14,
+    color: '#9DB4A8',
     textAlign: 'center',
-    paddingVertical: 40,
   },
   listItem: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#FFFFFF',
     paddingVertical: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0',
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    marginBottom: 8,
+    shadowColor: 'rgba(107, 207, 159, 0.08)',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 1,
+    shadowRadius: 4,
+    elevation: 1,
+  },
+  itemLeft: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   checkbox: {
     width: 20,
     height: 20,
     borderWidth: 2,
-    borderColor: '#E0E0E0',
-    borderRadius: 4,
+    borderColor: '#D4E8DD',
+    borderRadius: 6,
     marginRight: 12,
   },
   itemText: {
-    flex: 1,
     fontSize: 16,
-    color: '#000',
+    color: '#1A3A2E',
+    fontWeight: '500',
+    marginBottom: 4,
+  },
+  itemTime: {
+    fontSize: 12,
+    color: '#9DB4A8',
   },
   itemRight: {
     flexDirection: 'row',
     alignItems: 'center',
   },
   itemAmount: {
-    fontSize: 16,
-    color: '#000',
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#1A3A2E',
     marginRight: 12,
   },
   deleteButton: {
-    padding: 4,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#FFE5E5',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   deleteIcon: {
-    fontSize: 18,
+    fontSize: 24,
+    color: '#FF6B6B',
+    fontWeight: '300',
   },
 });
