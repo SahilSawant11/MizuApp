@@ -173,7 +173,7 @@ export const SplashScreen: React.FC<SplashScreenProps> = ({ onFinish }) => {
           ]}
         >
           <View style={styles.dropletGlow}>
-            <Text style={styles.droplet}>💧</Text>
+            <Text style={styles.droplet}>☘️</Text>
           </View>
         </Animated.View>
       </Animated.View>

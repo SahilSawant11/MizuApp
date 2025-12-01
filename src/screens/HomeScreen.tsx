@@ -161,7 +161,7 @@ export const HomeScreen: React.FC = () => {
           <Text style={styles.userName}>Welcome!</Text>
         </View>
         <View style={styles.logoContainer}>
-          <Text style={styles.logo}>💧</Text>
+          <Text style={styles.logo}>☘️</Text>
         </View>
       </View>
 
@@ -240,15 +240,13 @@ export const HomeScreen: React.FC = () => {
             entries.map(entry => (
               <View key={entry.id} style={styles.listItem}>
                 <View style={styles.itemLeft}>
-                  {entry.type === 'activity' && <View style={styles.checkbox} />}
+                  {/* {entry.type === 'activity' && <View style={styles.checkbox} />} */}
                   <View style={styles.itemContent}>
                     <View style={styles.itemHeader}>
                       <Text style={styles.itemText}>{entry.title}</Text>
-                      <View style={[styles.badge, entry.type === 'expense' ? styles.expenseBadge : styles.activityBadge]}>
                         <Text style={[styles.badgeText, entry.type === 'expense' ? styles.expenseText : styles.activityText]}>
-                          {entry.type === 'expense' ? '💸' : '✓'}
+                          {entry.type === 'expense' ? '' : ''}
                         </Text>
-                      </View>
                     </View>
                     <Text style={styles.itemTime}>
                       {new Date(entry.created_at).toLocaleTimeString('en-US', {
@@ -475,14 +473,14 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
   },
-  checkbox: {
-    width: 20,
-    height: 20,
-    borderWidth: 2,
-    borderColor: '#D4E8DD',
-    borderRadius: 6,
-    marginRight: 12,
-  },
+  // checkbox: {
+  //   width: 20,
+  //   height: 20,
+  //   borderWidth: 2,
+  //   borderColor: '#D4E8DD',
+  //   borderRadius: 6,
+  //   marginRight: 12,
+  // },
   itemContent: {
     flex: 1,
   },
@@ -499,19 +497,19 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     marginRight: 8,
   },
-  badge: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  expenseBadge: {
-    backgroundColor: '#FFE5E5',
-  },
-  activityBadge: {
-    backgroundColor: '#E8F5EE',
-  },
+  // badge: {
+  //   width: 24,
+  //   height: 24,
+  //   borderRadius: 12,
+  //   justifyContent: 'center',
+  //   alignItems: 'center',
+  // },
+  // expenseBadge: {
+  //   backgroundColor: '#FFE5E5',
+  // },
+  // activityBadge: {
+  //   backgroundColor: '#E8F5EE',
+  // },
   badgeText: {
     fontSize: 12,
     fontWeight: '600',

@@ -34,7 +34,7 @@ export const EntryCard: React.FC<EntryCardProps> = ({ entry, onPress, onLongPres
       <View style={styles.metadata}>
         <View style={[styles.badge, isExpense ? styles.expenseBadge : styles.activityBadge]}>
           <Text style={[styles.badgeText, isExpense ? styles.expenseText : styles.activityText]}>
-            {isExpense ? '💸 Expense' : '📝 Activity'}
+            {isExpense ? 'Expense' : 'Activity'}
           </Text>
         </View>
 
