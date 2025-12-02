@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, ActivityIndicator } from 'react-native';
+import { NavigationContainer } from '@react-navigation/native';
 import { testConnection } from './src/config/supabase';
-import { HomeScreen } from './src/screens/HomeScreen';
 import { SplashScreen } from './src/screens/SplashScreen';
-import { AuthProvider, useAuth } from './src/contexts/AuthContext';
+import { AuthProvider } from './src/contexts/AuthContext';
+import { BottomTabNavigator } from './src/navigation/BottomTabNavigator';
 
 function AppContent() {
   const [isReady, setIsReady] = useState(false);
@@ -56,9 +57,13 @@ function AppContent() {
     );
   }
 
-  // Directly show HomeScreen after initialization
-  console.log('✅ App ready, showing home screen');
-  return <HomeScreen />;
+  // Show app with navigation
+  console.log('✅ App ready, showing navigation');
+  return (
+    <NavigationContainer>
+      <BottomTabNavigator />
+    </NavigationContainer>
+  );
 }
 
 function App() {
