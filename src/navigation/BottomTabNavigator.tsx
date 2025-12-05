@@ -28,11 +28,11 @@ export const BottomTabNavigator = () => {
       }}
     >
       <Tab.Screen
-        name="Home"
+        name="Today"
         component={HomeScreen}
         options={{
           tabBarIcon: ({ color }) => (
-            <TabIcon emoji="🏠" color={color} />
+            <TabIcon emoji="✓" color={color} />
           ),
         }}
       />
