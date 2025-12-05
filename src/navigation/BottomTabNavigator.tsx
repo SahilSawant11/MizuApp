@@ -1,8 +1,8 @@
 import React from 'react';
-import { Text, View } from 'react-native'; // Add this import
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { HomeScreen } from '../screens/HomeScreen';
 import { CalendarScreen } from '../screens/CalendarScreen';
+import { ProfileScreen } from '../screens/ProfileScreen'; // Add Profile screen
 
 const Tab = createBottomTabNavigator();
 
@@ -45,6 +45,15 @@ export const BottomTabNavigator = () => {
           ),
         }}
       />
+      <Tab.Screen
+        name="Profile"
+        component={ProfileScreen}
+        options={{
+          tabBarIcon: ({ color }) => (
+            <TabIcon emoji="👤" color={color} />
+          ),
+        }}
+      />
     </Tab.Navigator>
   );
 };
@@ -61,3 +70,5 @@ const TabIcon = ({ emoji, color }: { emoji: string; color: string }) => {
     </View>
   );
 };
+
+import { Text, View } from 'react-native';
