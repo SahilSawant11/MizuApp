@@ -55,29 +55,6 @@ export const ProfileScreen: React.FC = () => {
             <Text style={styles.menuItemIcon}>→</Text>
           </TouchableOpacity>
           
-          <TouchableOpacity style={styles.menuItem}>
-            <Text style={styles.menuItemText}>Privacy Settings</Text>
-            <Text style={styles.menuItemIcon}>→</Text>
-          </TouchableOpacity>
-        </View>
-
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>App Settings</Text>
-          
-          <TouchableOpacity style={styles.menuItem}>
-            <Text style={styles.menuItemText}>Notifications</Text>
-            <Text style={styles.menuItemIcon}>→</Text>
-          </TouchableOpacity>
-          
-          <TouchableOpacity style={styles.menuItem}>
-            <Text style={styles.menuItemText}>Currency</Text>
-            <Text style={styles.menuItemIcon}>→</Text>
-          </TouchableOpacity>
-          
-          <TouchableOpacity style={styles.menuItem}>
-            <Text style={styles.menuItemText}>Theme</Text>
-            <Text style={styles.menuItemIcon}>→</Text>
-          </TouchableOpacity>
         </View>
 
         <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>

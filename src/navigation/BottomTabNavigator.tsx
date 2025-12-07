@@ -2,7 +2,7 @@ import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { HomeScreen } from '../screens/HomeScreen';
 import { CalendarScreen } from '../screens/CalendarScreen';
-import { ProfileScreen } from '../screens/ProfileScreen'; // Add Profile screen
+import { ProfileScreen } from '../screens/ProfileScreen'; 
 
 const Tab = createBottomTabNavigator();
 
@@ -17,9 +17,9 @@ export const BottomTabNavigator = () => {
           backgroundColor: '#FFFFFF',
           borderTopWidth: 1,
           borderTopColor: '#E8F5EE',
-          height: 60,
-          paddingBottom: 8,
-          paddingTop: 8,
+          height: 80,
+          paddingBottom: 10,
+          paddingTop: 10,
         },
         tabBarLabelStyle: {
           fontSize: 12,

@@ -86,3 +86,36 @@ export const debugSupabase = async () => {
     return null;
   }
 };
+
+// Check if username is available
+export const checkUsernameAvailability = async (username: string) => {
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('username')
+    .eq('username', username.toLowerCase())
+    .single();
+  
+  return { available: !data, error };
+};
+
+// Get user profile by username
+export const getProfileByUsername = async (username: string) => {
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('*')
+    .eq('username', username.toLowerCase())
+    .single();
+  
+  return { data, error };
+};
+
+// Get user profile by ID
+export const getProfileById = async (userId: string) => {
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('*')
+    .eq('id', userId)
+    .single();
+  
+  return { data, error };
+};

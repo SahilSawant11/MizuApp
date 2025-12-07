@@ -17,42 +17,156 @@ type AuthMode = 'welcome' | 'signup' | 'login';
 
 export const AuthScreen: React.FC = () => {
   const [mode, setMode] = useState<AuthMode>('welcome');
+  const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [useUsernameLogin, setUseUsernameLogin] = useState(false);
 
-  const handleEmailSignUp = async () => {
-    if (!email || !password) {
-      Alert.alert('Error', 'Please enter email and password');
+  const handleUsernameSignUp = async () => {
+    if (!username || !email || !password) {
+      Alert.alert('Error', 'Please fill all fields');
       return;
     }
 
-    if (password.length < 8) {
-      Alert.alert('Error', 'Password must be at least 8 characters');
+    if (username.length < 3) {
+      Alert.alert('Error', 'Username must be at least 3 characters');
       return;
     }
 
+    if (!/^[a-zA-Z0-9_]+$/.test(username)) {
+      Alert.alert('Error', 'Username can only contain letters, numbers, and underscores');
+      return;
+    }
+
+    if (password.length < 4) {
+      Alert.alert('Error', 'Password must be at least 4 characters');
+      return;
+    }
+
+    console.log('📝 Attempting sign up with username:', username);
     setLoading(true);
+    
     try {
-      const { data, error } = await supabase.auth.signUp({
+      // Step 1: Check if username is available
+      const { data: existingUser, error: checkError } = await supabase
+        .from('profiles')
+        .select('username')
+        .eq('username', username.toLowerCase())
+        .maybeSingle();
+
+      if (existingUser) {
+        throw new Error('Username already taken');
+      }
+
+      // Step 2: Create auth user
+      const { data: authData, error: authError } = await supabase.auth.signUp({
         email: email.trim(),
         password: password,
+        options: {
+          data: {
+            username: username.toLowerCase(),
+          },
+        },
       });
 
-      if (error) throw error;
+      if (authError) throw authError;
 
-      if (data.user) {
+      if (authData.user) {
+        // Step 3: Create profile in public.profiles table
+        const { error: profileError } = await supabase
+          .from('profiles')
+          .insert([
+            {
+              id: authData.user.id,
+              username: username.toLowerCase(),
+              email: email.trim(),
+              created_at: new Date().toISOString(),
+            },
+          ]);
+
+        if (profileError) {
+          console.error('Profile creation error:', profileError);
+          // Delete the auth user if profile creation fails
+          await supabase.auth.admin.deleteUser(authData.user.id);
+          throw new Error('Failed to create profile');
+        }
+
+        console.log('✅ Sign up successful!');
         Alert.alert(
           'Success!',
           'Account created! Please check your email to verify your account.',
-          [{ text: 'OK' }]
+          [
+            { 
+              text: 'OK', 
+              onPress: () => {
+                // Switch to login mode
+                setMode('login');
+                setUsername('');
+                setEmail('');
+                setPassword('');
+              }
+            }
+          ]
         );
-        // Switch to login mode after successful signup
-        setMode('login');
       }
     } catch (error: any) {
+      console.error('❌ SignUp Error:', error);
       Alert.alert('Sign Up Failed', error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleUsernameSignIn = async () => {
+    if (!username || !password) {
+      Alert.alert('Error', 'Please enter username and password');
+      return;
+    }
+
+    console.log('🔑 Attempting sign in with username:', username);
+    setLoading(true);
+    
+    try {
+      // Step 1: Get email from username
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('email')
+        .eq('username', username.toLowerCase())
+        .single();
+
+      if (profileError || !profile) {
+        throw new Error('Invalid username or password');
+      }
+
+      // Step 2: Sign in with email (from profile) and password
+      const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+        email: profile.email,
+        password: password,
+      });
+
+      console.log('📤 SignIn Response:', {
+        hasError: !!authError,
+        error: authError?.message,
+        userEmail: authData?.user?.email,
+      });
+
+      if (authError) {
+        if (authError.message.includes('Invalid login credentials')) {
+          throw new Error('Invalid username or password');
+        } else if (authError.message.includes('Email not confirmed')) {
+          throw new Error('Please verify your email first');
+        }
+        throw authError;
+      }
+
+      console.log('✅ SignIn Successful!');
+      // Auth state will update automatically via onAuthStateChange
+      
+    } catch (error: any) {
+      console.error('💥 SignIn Error:', error);
+      Alert.alert('Sign In Failed', error.message);
     } finally {
       setLoading(false);
     }
@@ -103,7 +217,7 @@ export const AuthScreen: React.FC = () => {
     }
   };
 
-  // Welcome Screen
+  // Welcome Screen (unchanged)
   if (mode === 'welcome') {
     return (
       <SafeAreaView style={styles.container}>
@@ -116,11 +230,11 @@ export const AuthScreen: React.FC = () => {
           </View>
 
           {/* Title */}
-          <Text style={styles.appName}>Mizu</Text>
-          <Text style={styles.tagline}>Track expenses, stay on budget</Text>
+          <Text style={styles.appName}>Mizu App</Text>
+          {/* <Text style={styles.tagline}>Track expenses, stay on budget</Text> */}
 
           {/* Features */}
-          <View style={styles.featuresContainer}>
+          {/* <View style={styles.featuresContainer}>
             <View style={styles.featureItem}>
               <Text style={styles.featureIcon}>💰</Text>
               <Text style={styles.featureText}>Smart Budget Tracking</Text>
@@ -133,24 +247,30 @@ export const AuthScreen: React.FC = () => {
               <Text style={styles.featureIcon}>🔒</Text>
               <Text style={styles.featureText}>Secure & Private</Text>
             </View>
-          </View>
+          </View> */}
 
           {/* CTA Buttons */}
           <View style={styles.buttonContainer}>
             <TouchableOpacity
               style={styles.primaryButton}
-              onPress={() => setMode('signup')}
+              onPress={() => {
+                setMode('signup');
+                setUseUsernameLogin(true);
+              }}
               disabled={loading}
             >
-              <Text style={styles.primaryButtonText}>Get Started</Text>
+              <Text style={styles.primaryButtonText}>Sign Up</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
               style={styles.secondaryButton}
-              onPress={() => setMode('login')}
+              onPress={() => {
+                setMode('login');
+                setUseUsernameLogin(true);
+              }}
               disabled={loading}
             >
-              <Text style={styles.secondaryButtonText}>I Have an Account</Text>
+              <Text style={styles.secondaryButtonText}>Sign In</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -189,26 +309,85 @@ export const AuthScreen: React.FC = () => {
             </Text>
           </View>
 
+          {/* Toggle between Username/Email */}
+          <View style={styles.loginTypeToggle}>
+            <TouchableOpacity
+              style={[
+                styles.toggleButton,
+                useUsernameLogin && styles.toggleButtonActive
+              ]}
+              onPress={() => setUseUsernameLogin(true)}
+            >
+              <Text style={[
+                styles.toggleButtonText,
+                useUsernameLogin && styles.toggleButtonTextActive
+              ]}>
+                Username
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[
+                styles.toggleButton,
+                !useUsernameLogin && styles.toggleButtonActive
+              ]}
+              onPress={() => setUseUsernameLogin(false)}
+            >
+              <Text style={[
+                styles.toggleButtonText,
+                !useUsernameLogin && styles.toggleButtonTextActive
+              ]}>
+                Email
+              </Text>
+            </TouchableOpacity>
+          </View>
+
           {/* Form */}
           <View style={styles.formContainer}>
-            {/* Email Input */}
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Email Address</Text>
-              <View style={styles.inputWrapper}>
-                <Text style={styles.inputIcon}>✉️</Text>
-                <TextInput
-                  style={styles.input}
-                  value={email}
-                  onChangeText={setEmail}
-                  placeholder="you@example.com"
-                  placeholderTextColor="#9DB4A8"
-                  keyboardType="email-address"
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                  editable={!loading}
-                />
+            {/* Username Input (for signup or username login) */}
+            {(mode === 'signup' || useUsernameLogin) && (
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>Username</Text>
+                <View style={styles.inputWrapper}>
+                  <Text style={styles.inputIcon}>👤</Text>
+                  <TextInput
+                    style={styles.input}
+                    value={username}
+                    onChangeText={setUsername}
+                    placeholder="User Name"
+                    placeholderTextColor="#9DB4A8"
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                    editable={!loading}
+                  />
+                </View>
+                {mode === 'signup' && (
+                  <Text style={styles.hint}>3-20 letters, numbers, or underscores</Text>
+                )}
               </View>
-            </View>
+            )}
+
+            {/* Email Input (for email login or signup) */}
+            {(!useUsernameLogin || mode === 'signup') && (
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>
+                  {mode === 'signup' ? 'Email Address' : 'Email'}
+                </Text>
+                <View style={styles.inputWrapper}>
+                  <Text style={styles.inputIcon}>✉️</Text>
+                  <TextInput
+                    style={styles.input}
+                    value={email}
+                    onChangeText={setEmail}
+                    placeholder="you@example.com"
+                    placeholderTextColor="#9DB4A8"
+                    keyboardType="email-address"
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                    editable={!loading}
+                  />
+                </View>
+              </View>
+            )}
 
             {/* Password Input */}
             <View style={styles.inputGroup}>
@@ -247,7 +426,15 @@ export const AuthScreen: React.FC = () => {
             {/* Submit Button */}
             <TouchableOpacity
               style={[styles.submitButton, loading && styles.submitButtonDisabled]}
-              onPress={mode === 'signup' ? handleEmailSignUp : handleEmailSignIn}
+              onPress={() => {
+                if (mode === 'signup') {
+                  handleUsernameSignUp();
+                } else if (useUsernameLogin) {
+                  handleUsernameSignIn();
+                } else {
+                  handleEmailSignIn();
+                }
+              }}
               disabled={loading}
             >
               {loading ? (
@@ -261,21 +448,21 @@ export const AuthScreen: React.FC = () => {
           </View>
 
           {/* Divider */}
-          <View style={styles.divider}>
+          {/* <View style={styles.divider}>
             <View style={styles.dividerLine} />
             <Text style={styles.dividerText}>Or continue with</Text>
             <View style={styles.dividerLine} />
-          </View>
+          </View> */}
 
           {/* Google Sign In */}
-          <TouchableOpacity
+          {/* <TouchableOpacity
             style={styles.googleButton}
             onPress={handleGoogleSignIn}
             disabled={loading}
           >
             <Text style={styles.googleIcon}>G</Text>
             <Text style={styles.googleButtonText}>Continue with Google</Text>
-          </TouchableOpacity>
+          </TouchableOpacity> */}
 
           {/* Toggle Sign In/Up */}
           <View style={styles.toggleContainer}>
@@ -411,7 +598,7 @@ const styles = StyleSheet.create({
   },
   authHeader: {
     alignItems: 'center',
-    marginBottom: 32,
+    marginBottom: 24,
   },
   logoCircleSmall: {
     width: 64,
@@ -434,6 +621,35 @@ const styles = StyleSheet.create({
   authSubtitle: {
     fontSize: 15,
     color: '#5F7A6F',
+  },
+  loginTypeToggle: {
+    flexDirection: 'row',
+    backgroundColor: '#E8F5EE',
+    borderRadius: 12,
+    padding: 4,
+    marginBottom: 24,
+  },
+  toggleButton: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  toggleButtonActive: {
+    backgroundColor: '#FFFFFF',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 2,
+  },
+  toggleButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#5F7A6F',
+  },
+  toggleButtonTextActive: {
+    color: '#6BCF9F',
   },
   formContainer: {
     marginBottom: 24,
@@ -487,6 +703,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#9DB4A8',
     marginTop: 6,
+    fontStyle: 'italic',
   },
   submitButton: {
     backgroundColor: '#6BCF9F',
@@ -559,5 +776,3 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
 });
-
-export default AuthScreen;
