@@ -309,83 +309,47 @@ export const AuthScreen: React.FC = () => {
             </Text>
           </View>
 
-          {/* Toggle between Username/Email */}
-          <View style={styles.loginTypeToggle}>
-            <TouchableOpacity
-              style={[
-                styles.toggleButton,
-                useUsernameLogin && styles.toggleButtonActive
-              ]}
-              onPress={() => setUseUsernameLogin(true)}
-            >
-              <Text style={[
-                styles.toggleButtonText,
-                useUsernameLogin && styles.toggleButtonTextActive
-              ]}>
-                Username
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[
-                styles.toggleButton,
-                !useUsernameLogin && styles.toggleButtonActive
-              ]}
-              onPress={() => setUseUsernameLogin(false)}
-            >
-              <Text style={[
-                styles.toggleButtonText,
-                !useUsernameLogin && styles.toggleButtonTextActive
-              ]}>
-                Email
-              </Text>
-            </TouchableOpacity>
-          </View>
-
-          {/* Form */}
-          <View style={styles.formContainer}>
-            {/* Username Input (for signup or username login) */}
-            {(mode === 'signup' || useUsernameLogin) && (
-              <View style={styles.inputGroup}>
-                <Text style={styles.label}>Username</Text>
-                <View style={styles.inputWrapper}>
-                  <Text style={styles.inputIcon}>👤</Text>
-                  <TextInput
-                    style={styles.input}
-                    value={username}
-                    onChangeText={setUsername}
-                    placeholder="User Name"
-                    placeholderTextColor="#9DB4A8"
-                    autoCapitalize="none"
-                    autoCorrect={false}
-                    editable={!loading}
-                  />
-                </View>
-                {mode === 'signup' && (
-                  <Text style={styles.hint}>3-20 letters, numbers, or underscores</Text>
-                )}
+            {/* Form */}
+            <View style={styles.formContainer}>
+            {/* Username Input */}
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Username</Text>
+              <View style={styles.inputWrapper}>
+              <Text style={styles.inputIcon}>👤</Text>
+              <TextInput
+                style={styles.input}
+                value={username}
+                onChangeText={setUsername}
+                placeholder="User Name"
+                placeholderTextColor="#9DB4A8"
+                autoCapitalize="none"
+                autoCorrect={false}
+                editable={!loading}
+              />
               </View>
-            )}
+              {mode === 'signup' && (
+              <Text style={styles.hint}>3-20 letters, numbers, or underscores</Text>
+              )}
+            </View>
 
-            {/* Email Input (for email login or signup) */}
-            {(!useUsernameLogin || mode === 'signup') && (
+            {/* Email Input (signup only) */}
+            {mode === 'signup' && (
               <View style={styles.inputGroup}>
-                <Text style={styles.label}>
-                  {mode === 'signup' ? 'Email Address' : 'Email'}
-                </Text>
-                <View style={styles.inputWrapper}>
-                  <Text style={styles.inputIcon}>✉️</Text>
-                  <TextInput
-                    style={styles.input}
-                    value={email}
-                    onChangeText={setEmail}
-                    placeholder="you@example.com"
-                    placeholderTextColor="#9DB4A8"
-                    keyboardType="email-address"
-                    autoCapitalize="none"
-                    autoCorrect={false}
-                    editable={!loading}
-                  />
-                </View>
+              <Text style={styles.label}>Email Address</Text>
+              <View style={styles.inputWrapper}>
+                <Text style={styles.inputIcon}>✉️</Text>
+                <TextInput
+                style={styles.input}
+                value={email}
+                onChangeText={setEmail}
+                placeholder="you@example.com"
+                placeholderTextColor="#9DB4A8"
+                keyboardType="email-address"
+                autoCapitalize="none"
+                autoCorrect={false}
+                editable={!loading}
+                />
+              </View>
               </View>
             )}
 

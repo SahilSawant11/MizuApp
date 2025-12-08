@@ -7,10 +7,13 @@ import {
   TouchableOpacity,
   SafeAreaView,
   Alert,
+  ActivityIndicator,
+  RefreshControl,
 } from 'react-native';
 import { Entry } from '../models/Entry';
 import { entryRepository } from '../database/entryRepo';
 import { useAuth } from '../contexts/AuthContext';
+import { useFocusEffect } from '@react-navigation/native';
 
 interface DayData {
   date: string;
@@ -23,10 +26,23 @@ export const CalendarScreen: React.FC = () => {
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [monthData, setMonthData] = useState<Map<string, DayData>>(new Map());
   const [selectedDayEntries, setSelectedDayEntries] = useState<Entry[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   const { user } = useAuth();
 
+  // Format date consistently
+  const formatDate = (date: Date): string => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
   const loadMonthData = useCallback(async () => {
+    if (!user) return;
+    
     try {
+      setLoading(true);
       const year = currentDate.getFullYear();
       const month = currentDate.getMonth();
       
@@ -34,10 +50,14 @@ export const CalendarScreen: React.FC = () => {
       const firstDay = new Date(year, month, 1);
       const lastDay = new Date(year, month + 1, 0);
       
-      const startDate = firstDay.toISOString().split('T')[0];
-      const endDate = lastDay.toISOString().split('T')[0];
+      const startDate = formatDate(firstDay);
+      const endDate = formatDate(lastDay);
+      
+      console.log('📅 Loading month data:', { startDate, endDate, userId: user.id });
       
       const entries = await entryRepository.getByDateRange(startDate, endDate);
+      
+      console.log('📊 Entries loaded:', entries.length);
       
       // Group by date
       const dataMap = new Map<string, DayData>();
@@ -57,33 +77,61 @@ export const CalendarScreen: React.FC = () => {
         }
       });
       
+      console.log('📈 Days with entries:', dataMap.size);
       setMonthData(dataMap);
     } catch (error) {
-      console.error('Failed to load month data:', error);
+      console.error('❌ Failed to load month data:', error);
+      Alert.alert('Error', 'Failed to load calendar data');
+    } finally {
+      setLoading(false);
     }
-  }, [currentDate]);
+  }, [currentDate, user]);
 
   const loadSelectedDayEntries = useCallback(async () => {
+    if (!user) return;
+    
     try {
-      const dateStr = selectedDate.toISOString().split('T')[0];
+      const dateStr = formatDate(selectedDate);
+      console.log('📝 Loading entries for date:', dateStr, 'user:', user.id);
+      
       const entries = await entryRepository.getByDate(dateStr);
+      console.log('✅ Entries loaded for selected day:', entries.length);
+      
       setSelectedDayEntries(entries);
     } catch (error) {
-      console.error('Failed to load day entries:', error);
+      console.error('❌ Failed to load day entries:', error);
     }
-  }, [selectedDate]);
+  }, [selectedDate, user]);
 
+  // Load data when screen comes into focus
+  useFocusEffect(
+    useCallback(() => {
+      if (user) {
+        loadMonthData();
+        loadSelectedDayEntries();
+      }
+    }, [user, loadMonthData, loadSelectedDayEntries])
+  );
+
+  // Load month data when currentDate changes
   useEffect(() => {
     if (user) {
       loadMonthData();
     }
   }, [user, currentDate, loadMonthData]);
 
+  // Load selected day entries when selectedDate changes
   useEffect(() => {
     if (user) {
       loadSelectedDayEntries();
     }
   }, [user, selectedDate, loadSelectedDayEntries]);
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await Promise.all([loadMonthData(), loadSelectedDayEntries()]);
+    setRefreshing(false);
+  };
 
   const getDaysInMonth = () => {
     const year = currentDate.getFullYear();
@@ -126,13 +174,25 @@ export const CalendarScreen: React.FC = () => {
   };
 
   const handleDeleteEntry = async (id: number) => {
-    try {
-      await entryRepository.delete(id);
-      loadSelectedDayEntries();
-      loadMonthData();
-    } catch (error) {
-      Alert.alert('Error', 'Failed to delete entry');
-    }
+    Alert.alert(
+      'Delete Entry',
+      'Are you sure you want to delete this entry?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await entryRepository.delete(id);
+              await Promise.all([loadSelectedDayEntries(), loadMonthData()]);
+            } catch (error) {
+              Alert.alert('Error', 'Failed to delete entry');
+            }
+          },
+        },
+      ]
+    );
   };
 
   const getDotColor = (amount: number): string => {
@@ -144,30 +204,52 @@ export const CalendarScreen: React.FC = () => {
 
   const isToday = (date: Date): boolean => {
     const today = new Date();
-    return date.toDateString() === today.toDateString();
+    return formatDate(date) === formatDate(today);
   };
 
   const isSelected = (date: Date): boolean => {
-    return date.toDateString() === selectedDate.toDateString();
+    return formatDate(date) === formatDate(selectedDate);
   };
 
   const days = getDaysInMonth();
   const monthName = currentDate.toLocaleString('default', { month: 'long', year: 'numeric' });
   
-  const selectedDateStr = selectedDate.toISOString().split('T')[0];
+  const selectedDateStr = formatDate(selectedDate);
   const selectedDayData = monthData.get(selectedDateStr);
   const selectedTotal = selectedDayData?.totalExpenses || 0;
+
+  if (!user) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.centerContainer}>
+          <Text style={styles.errorText}>Please log in to view calendar</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.headerTitle}>📅 Calendar</Text>
-        <TouchableOpacity style={styles.todayButton} onPress={goToToday}>
-          <Text style={styles.todayButtonText}>Today</Text>
-        </TouchableOpacity>
+        <View style={styles.headerRight}>
+          {loading && <ActivityIndicator size="small" color="#6BCF9F" style={{ marginRight: 12 }} />}
+          <TouchableOpacity style={styles.todayButton} onPress={goToToday}>
+            <Text style={styles.todayButtonText}>Today</Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
-      <ScrollView contentContainerStyle={styles.content}>
+      <ScrollView 
+        contentContainerStyle={styles.content}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor="#6BCF9F"
+          />
+        }
+      >
         {/* Month Navigation */}
         <View style={styles.monthHeader}>
           <TouchableOpacity style={styles.navButton} onPress={goToPreviousMonth}>
@@ -197,7 +279,7 @@ export const CalendarScreen: React.FC = () => {
                 return <View key={`empty-${index}`} style={styles.dayCell} />;
               }
 
-              const dateStr = day.toISOString().split('T')[0];
+              const dateStr = formatDate(day);
               const dayData = monthData.get(dateStr);
               const hasEntries = dayData && dayData.entryCount > 0;
 
@@ -253,6 +335,9 @@ export const CalendarScreen: React.FC = () => {
             <View style={styles.emptyState}>
               <Text style={styles.emptyIcon}>📝</Text>
               <Text style={styles.emptyText}>No entries for this day</Text>
+              <Text style={styles.emptySubtext}>
+                {isToday(selectedDate) ? 'Start tracking your day!' : 'Select another date'}
+              </Text>
             </View>
           ) : (
             selectedDayEntries.map(entry => (
@@ -265,6 +350,9 @@ export const CalendarScreen: React.FC = () => {
                   </View>
                   <View style={styles.entryContent}>
                     <Text style={styles.entryTitle}>{entry.title}</Text>
+                    {entry.category && (
+                      <Text style={styles.entryCategory}>{entry.category}</Text>
+                    )}
                     <Text style={styles.entryTime}>
                       {new Date(entry.created_at).toLocaleTimeString('en-US', {
                         hour: '2-digit',
@@ -288,6 +376,13 @@ export const CalendarScreen: React.FC = () => {
             ))
           )}
         </View>
+
+        {/* Debug info (remove in production) */}
+        <View style={styles.debugInfo}>
+          <Text style={styles.debugText}>User: {user.email}</Text>
+          <Text style={styles.debugText}>Entries this month: {monthData.size} days</Text>
+          <Text style={styles.debugText}>Selected day: {selectedDayEntries.length} entries</Text>
+        </View>
       </ScrollView>
     </SafeAreaView>
   );
@@ -297,6 +392,15 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#F8FFF9',
+  },
+  centerContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  errorText: {
+    fontSize: 16,
+    color: '#FF6B6B',
   },
   header: {
     flexDirection: 'row',
@@ -312,6 +416,10 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: '700',
     color: '#1A3A2E',
+  },
+  headerRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   todayButton: {
     backgroundColor: '#6BCF9F',
@@ -423,6 +531,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderRadius: 16,
     padding: 20,
+    marginBottom: 16,
     shadowColor: 'rgba(107, 207, 159, 0.1)',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 1,
@@ -458,6 +567,12 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   emptyText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#5F7A6F',
+    marginBottom: 4,
+  },
+  emptySubtext: {
     fontSize: 14,
     color: '#9DB4A8',
   },
@@ -500,6 +615,11 @@ const styles = StyleSheet.create({
     color: '#1A3A2E',
     marginBottom: 2,
   },
+  entryCategory: {
+    fontSize: 12,
+    color: '#9DB4A8',
+    marginBottom: 2,
+  },
   entryTime: {
     fontSize: 12,
     color: '#9DB4A8',
@@ -526,5 +646,16 @@ const styles = StyleSheet.create({
     fontSize: 20,
     color: '#FF6B6B',
     fontWeight: '300',
+  },
+  debugInfo: {
+    backgroundColor: '#E8F5EE',
+    borderRadius: 12,
+    padding: 12,
+    marginTop: 8,
+  },
+  debugText: {
+    fontSize: 12,
+    color: '#5F7A6F',
+    marginBottom: 4,
   },
 });
