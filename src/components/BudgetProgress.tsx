@@ -1,6 +1,8 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import Icon from 'react-native-vector-icons/Feather';
 import { BudgetType } from '../utils/budgetStorage';
+import { fonts } from '../theme/typography';
 
 interface BudgetProgressProps {
   budget: number;
@@ -27,9 +29,15 @@ export const BudgetProgress: React.FC<BudgetProgressProps> = ({
   };
 
   const getStatusText = () => {
-    if (isOverBudget) return '⚠️ Over Budget';
-    if (isWarning) return '⚡ Almost There';
-    return '✅ On Track';
+    if (isOverBudget) return 'Over Budget';
+    if (isWarning) return 'Almost There';
+    return 'On Track';
+  };
+
+  const getStatusIcon = () => {
+    if (isOverBudget) return 'alert-triangle';
+    if (isWarning) return 'zap';
+    return 'check-circle';
   };
 
   const getPeriodText = () => {
@@ -48,7 +56,7 @@ export const BudgetProgress: React.FC<BudgetProgressProps> = ({
       <View style={styles.header}>
         <Text style={styles.title}>Budget {getPeriodText()}</Text>
         <TouchableOpacity onPress={onSettingsPress} style={styles.settingsButton}>
-          <Text style={styles.settingsIcon}>⚙️</Text>
+          <Icon name="settings" size={18} color="#6BCF9F" />
         </TouchableOpacity>
       </View>
 
@@ -92,6 +100,7 @@ export const BudgetProgress: React.FC<BudgetProgressProps> = ({
 
       {/* Status */}
       <View style={[styles.statusBadge, { backgroundColor: getStatusColor() + '20' }]}>
+        <Icon name={getStatusIcon()} size={16} color={getStatusColor()} />
         <Text style={[styles.statusText, { color: getStatusColor() }]}>
           {getStatusText()}
         </Text>
@@ -122,6 +131,7 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '700',
     color: '#1A3A2E',
+    fontFamily: fonts.bold,
   },
   settingsButton: {
     width: 32,
@@ -130,9 +140,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#E8F5EE',
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  settingsIcon: {
-    fontSize: 16,
   },
   amountRow: {
     flexDirection: 'row',
@@ -154,21 +161,25 @@ const styles = StyleSheet.create({
     color: '#9DB4A8',
     marginBottom: 6,
     fontWeight: '500',
+    fontFamily: fonts.medium,
   },
   budgetAmount: {
     fontSize: 20,
     fontWeight: '700',
     color: '#1A3A2E',
+    fontFamily: fonts.bold,
   },
   spentAmount: {
     fontSize: 20,
     fontWeight: '700',
     color: '#5F7A6F',
+    fontFamily: fonts.bold,
   },
   remainingAmount: {
     fontSize: 20,
     fontWeight: '700',
     color: '#6BCF9F',
+    fontFamily: fonts.bold,
   },
   overBudget: {
     color: '#FF6B6B',
@@ -189,7 +200,6 @@ const styles = StyleSheet.create({
   progressFill: {
     height: '100%',
     borderRadius: 6,
-    // transition: 'width 0.3s ease',
   },
   percentageText: {
     fontSize: 14,
@@ -197,15 +207,20 @@ const styles = StyleSheet.create({
     color: '#1A3A2E',
     minWidth: 40,
     textAlign: 'right',
+    fontFamily: fonts.bold,
   },
   statusBadge: {
     paddingVertical: 8,
     paddingHorizontal: 16,
     borderRadius: 8,
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
   },
   statusText: {
     fontSize: 14,
     fontWeight: '600',
+    marginLeft: 6,
+    fontFamily: fonts.semibold,
   },
 });

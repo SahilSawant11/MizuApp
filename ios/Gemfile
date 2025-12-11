@@ -1,0 +1,2 @@
+ruby '3.3.10'
+gem 'cocoapods', '1.10.0'

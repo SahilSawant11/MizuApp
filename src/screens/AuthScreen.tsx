@@ -11,7 +11,10 @@ import {
   ActivityIndicator,
   SafeAreaView,
 } from 'react-native';
+import Icon from 'react-native-vector-icons/Feather';
+import MaterialIcon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { supabase } from '../config/supabase';
+import { fonts } from '../theme/typography';
 
 type AuthMode = 'welcome' | 'signup' | 'login';
 
@@ -49,7 +52,6 @@ export const AuthScreen: React.FC = () => {
     setLoading(true);
     
     try {
-      // Step 1: Check if username is available
       const { data: existingUser, error: checkError } = await supabase
         .from('profiles')
         .select('username')
@@ -60,7 +62,6 @@ export const AuthScreen: React.FC = () => {
         throw new Error('Username already taken');
       }
 
-      // Step 2: Create auth user
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: email.trim(),
         password: password,
@@ -74,7 +75,6 @@ export const AuthScreen: React.FC = () => {
       if (authError) throw authError;
 
       if (authData.user) {
-        // Step 3: Create profile in public.profiles table
         const { error: profileError } = await supabase
           .from('profiles')
           .insert([
@@ -88,7 +88,6 @@ export const AuthScreen: React.FC = () => {
 
         if (profileError) {
           console.error('Profile creation error:', profileError);
-          // Delete the auth user if profile creation fails
           await supabase.auth.admin.deleteUser(authData.user.id);
           throw new Error('Failed to create profile');
         }
@@ -101,7 +100,6 @@ export const AuthScreen: React.FC = () => {
             { 
               text: 'OK', 
               onPress: () => {
-                // Switch to login mode
                 setMode('login');
                 setUsername('');
                 setEmail('');
@@ -129,7 +127,6 @@ export const AuthScreen: React.FC = () => {
     setLoading(true);
     
     try {
-      // Step 1: Get email from username
       const { data: profile, error: profileError } = await supabase
         .from('profiles')
         .select('email')
@@ -140,7 +137,6 @@ export const AuthScreen: React.FC = () => {
         throw new Error('Invalid username or password');
       }
 
-      // Step 2: Sign in with email (from profile) and password
       const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
         email: profile.email,
         password: password,
@@ -162,7 +158,6 @@ export const AuthScreen: React.FC = () => {
       }
 
       console.log('✅ SignIn Successful!');
-      // Auth state will update automatically via onAuthStateChange
       
     } catch (error: any) {
       console.error('💥 SignIn Error:', error);
@@ -217,7 +212,7 @@ export const AuthScreen: React.FC = () => {
     }
   };
 
-  // Welcome Screen (unchanged)
+  // Welcome Screen
   if (mode === 'welcome') {
     return (
       <SafeAreaView style={styles.container}>
@@ -225,29 +220,12 @@ export const AuthScreen: React.FC = () => {
           {/* Logo */}
           <View style={styles.logoContainer}>
             <View style={styles.logoCircle}>
-              <Text style={styles.logo}>☘️</Text>
+              <MaterialIcon name="leaf" size={60} color="#FFFFFF" />
             </View>
           </View>
 
           {/* Title */}
           <Text style={styles.appName}>Mizu App</Text>
-          {/* <Text style={styles.tagline}>Track expenses, stay on budget</Text> */}
-
-          {/* Features */}
-          {/* <View style={styles.featuresContainer}>
-            <View style={styles.featureItem}>
-              <Text style={styles.featureIcon}>💰</Text>
-              <Text style={styles.featureText}>Smart Budget Tracking</Text>
-            </View>
-            <View style={styles.featureItem}>
-              <Text style={styles.featureIcon}>📊</Text>
-              <Text style={styles.featureText}>Expense Analytics</Text>
-            </View>
-            <View style={styles.featureItem}>
-              <Text style={styles.featureIcon}>🔒</Text>
-              <Text style={styles.featureText}>Secure & Private</Text>
-            </View>
-          </View> */}
 
           {/* CTA Buttons */}
           <View style={styles.buttonContainer}>
@@ -291,13 +269,14 @@ export const AuthScreen: React.FC = () => {
             style={styles.backButton}
             onPress={() => setMode('welcome')}
           >
-            <Text style={styles.backButtonText}>← Back</Text>
+            <Icon name="arrow-left" size={20} color="#5F7A6F" />
+            <Text style={styles.backButtonText}>Back</Text>
           </TouchableOpacity>
 
           {/* Header */}
           <View style={styles.authHeader}>
             <View style={styles.logoCircleSmall}>
-              <Text style={styles.logoSmall}>☘️</Text>
+              <MaterialIcon name="leaf" size={32} color="#6BCF9F" />
             </View>
             <Text style={styles.authTitle}>
               {mode === 'signup' ? 'Create Account' : 'Welcome Back'}
@@ -309,47 +288,47 @@ export const AuthScreen: React.FC = () => {
             </Text>
           </View>
 
-            {/* Form */}
-            <View style={styles.formContainer}>
+          {/* Form */}
+          <View style={styles.formContainer}>
             {/* Username Input */}
             <View style={styles.inputGroup}>
               <Text style={styles.label}>Username</Text>
               <View style={styles.inputWrapper}>
-              <Text style={styles.inputIcon}>👤</Text>
-              <TextInput
-                style={styles.input}
-                value={username}
-                onChangeText={setUsername}
-                placeholder="User Name"
-                placeholderTextColor="#9DB4A8"
-                autoCapitalize="none"
-                autoCorrect={false}
-                editable={!loading}
-              />
+                <Icon name="user" size={18} color="#9DB4A8" style={styles.inputIcon} />
+                <TextInput
+                  style={styles.input}
+                  value={username}
+                  onChangeText={setUsername}
+                  placeholder="User Name"
+                  placeholderTextColor="#9DB4A8"
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  editable={!loading}
+                />
               </View>
               {mode === 'signup' && (
-              <Text style={styles.hint}>3-20 letters, numbers, or underscores</Text>
+                <Text style={styles.hint}>3-20 letters, numbers, or underscores</Text>
               )}
             </View>
 
             {/* Email Input (signup only) */}
             {mode === 'signup' && (
               <View style={styles.inputGroup}>
-              <Text style={styles.label}>Email Address</Text>
-              <View style={styles.inputWrapper}>
-                <Text style={styles.inputIcon}>✉️</Text>
-                <TextInput
-                style={styles.input}
-                value={email}
-                onChangeText={setEmail}
-                placeholder="you@example.com"
-                placeholderTextColor="#9DB4A8"
-                keyboardType="email-address"
-                autoCapitalize="none"
-                autoCorrect={false}
-                editable={!loading}
-                />
-              </View>
+                <Text style={styles.label}>Email Address</Text>
+                <View style={styles.inputWrapper}>
+                  <Icon name="mail" size={18} color="#9DB4A8" style={styles.inputIcon} />
+                  <TextInput
+                    style={styles.input}
+                    value={email}
+                    onChangeText={setEmail}
+                    placeholder="you@example.com"
+                    placeholderTextColor="#9DB4A8"
+                    keyboardType="email-address"
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                    editable={!loading}
+                  />
+                </View>
               </View>
             )}
 
@@ -364,7 +343,7 @@ export const AuthScreen: React.FC = () => {
                 )}
               </View>
               <View style={styles.inputWrapper}>
-                <Text style={styles.inputIcon}>🔒</Text>
+                <Icon name="lock" size={18} color="#9DB4A8" style={styles.inputIcon} />
                 <TextInput
                   style={styles.input}
                   value={password}
@@ -379,7 +358,11 @@ export const AuthScreen: React.FC = () => {
                   style={styles.eyeButton}
                   onPress={() => setShowPassword(!showPassword)}
                 >
-                  <Text style={styles.eyeIcon}>{showPassword ? '👁️' : '👁️‍🗨️'}</Text>
+                  <Icon 
+                    name={showPassword ? 'eye' : 'eye-off'} 
+                    size={18} 
+                    color="#9DB4A8" 
+                  />
                 </TouchableOpacity>
               </View>
               {mode === 'signup' && (
@@ -410,23 +393,6 @@ export const AuthScreen: React.FC = () => {
               )}
             </TouchableOpacity>
           </View>
-
-          {/* Divider */}
-          {/* <View style={styles.divider}>
-            <View style={styles.dividerLine} />
-            <Text style={styles.dividerText}>Or continue with</Text>
-            <View style={styles.dividerLine} />
-          </View> */}
-
-          {/* Google Sign In */}
-          {/* <TouchableOpacity
-            style={styles.googleButton}
-            onPress={handleGoogleSignIn}
-            disabled={loading}
-          >
-            <Text style={styles.googleIcon}>G</Text>
-            <Text style={styles.googleButtonText}>Continue with Google</Text>
-          </TouchableOpacity> */}
 
           {/* Toggle Sign In/Up */}
           <View style={styles.toggleContainer}>
@@ -479,9 +445,6 @@ const styles = StyleSheet.create({
     shadowRadius: 16,
     elevation: 8,
   },
-  logo: {
-    fontSize: 60,
-  },
   appName: {
     fontSize: 48,
     fontWeight: '800',
@@ -489,31 +452,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginBottom: 8,
     letterSpacing: -2,
-  },
-  tagline: {
-    fontSize: 16,
-    color: '#5F7A6F',
-    textAlign: 'center',
-    marginBottom: 48,
-    fontWeight: '500',
-  },
-  featuresContainer: {
-    marginBottom: 48,
-  },
-  featureItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 20,
-    paddingHorizontal: 16,
-  },
-  featureIcon: {
-    fontSize: 28,
-    marginRight: 16,
-  },
-  featureText: {
-    fontSize: 16,
-    color: '#1A3A2E',
-    fontWeight: '600',
+    fontFamily: fonts.bold,
   },
   buttonContainer: {
     gap: 12,
@@ -533,6 +472,7 @@ const styles = StyleSheet.create({
     fontSize: 17,
     fontWeight: '700',
     color: '#FFFFFF',
+    fontFamily: fonts.bold,
   },
   secondaryButton: {
     backgroundColor: '#FFFFFF',
@@ -546,6 +486,7 @@ const styles = StyleSheet.create({
     fontSize: 17,
     fontWeight: '600',
     color: '#1A3A2E',
+    fontFamily: fonts.semibold,
   },
   authContainer: {
     flex: 1,
@@ -553,12 +494,16 @@ const styles = StyleSheet.create({
     paddingTop: 20,
   },
   backButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
     marginBottom: 24,
   },
   backButtonText: {
     fontSize: 16,
     color: '#5F7A6F',
     fontWeight: '600',
+    marginLeft: 8,
+    fontFamily: fonts.semibold,
   },
   authHeader: {
     alignItems: 'center',
@@ -568,52 +513,22 @@ const styles = StyleSheet.create({
     width: 64,
     height: 64,
     borderRadius: 32,
-    backgroundColor: '#6BCF9F',
+    backgroundColor: '#E8F5EE',
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 16,
-  },
-  logoSmall: {
-    fontSize: 32,
   },
   authTitle: {
     fontSize: 28,
     fontWeight: '700',
     color: '#1A3A2E',
     marginBottom: 8,
+    fontFamily: fonts.bold,
   },
   authSubtitle: {
     fontSize: 15,
     color: '#5F7A6F',
-  },
-  loginTypeToggle: {
-    flexDirection: 'row',
-    backgroundColor: '#E8F5EE',
-    borderRadius: 12,
-    padding: 4,
-    marginBottom: 24,
-  },
-  toggleButton: {
-    flex: 1,
-    paddingVertical: 12,
-    borderRadius: 8,
-    alignItems: 'center',
-  },
-  toggleButtonActive: {
-    backgroundColor: '#FFFFFF',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
-    elevation: 2,
-  },
-  toggleButtonText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#5F7A6F',
-  },
-  toggleButtonTextActive: {
-    color: '#6BCF9F',
+    fontFamily: fonts.regular,
   },
   formContainer: {
     marginBottom: 24,
@@ -626,6 +541,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#1A3A2E',
     marginBottom: 8,
+    fontFamily: fonts.semibold,
   },
   labelRow: {
     flexDirection: 'row',
@@ -637,6 +553,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#6BCF9F',
     fontWeight: '600',
+    fontFamily: fonts.semibold,
   },
   inputWrapper: {
     flexDirection: 'row',
@@ -648,7 +565,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
   },
   inputIcon: {
-    fontSize: 18,
     marginRight: 12,
   },
   input: {
@@ -656,18 +572,17 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#1A3A2E',
     paddingVertical: 16,
+    fontFamily: fonts.regular,
   },
   eyeButton: {
     padding: 4,
-  },
-  eyeIcon: {
-    fontSize: 18,
   },
   hint: {
     fontSize: 12,
     color: '#9DB4A8',
     marginTop: 6,
     fontStyle: 'italic',
+    fontFamily: fonts.regular,
   },
   submitButton: {
     backgroundColor: '#6BCF9F',
@@ -688,42 +603,7 @@ const styles = StyleSheet.create({
     fontSize: 17,
     fontWeight: '700',
     color: '#FFFFFF',
-  },
-  divider: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginVertical: 24,
-  },
-  dividerLine: {
-    flex: 1,
-    height: 1,
-    backgroundColor: '#E8F5EE',
-  },
-  dividerText: {
-    marginHorizontal: 16,
-    fontSize: 14,
-    color: '#9DB4A8',
-  },
-  googleButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#FFFFFF',
-    paddingVertical: 16,
-    borderRadius: 12,
-    borderWidth: 2,
-    borderColor: '#E8F5EE',
-  },
-  googleIcon: {
-    fontSize: 20,
-    fontWeight: '700',
-    marginRight: 12,
-    color: '#1A3A2E',
-  },
-  googleButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#1A3A2E',
+    fontFamily: fonts.bold,
   },
   toggleContainer: {
     flexDirection: 'row',
@@ -733,10 +613,12 @@ const styles = StyleSheet.create({
   toggleText: {
     fontSize: 14,
     color: '#5F7A6F',
+    fontFamily: fonts.regular,
   },
   toggleLink: {
     fontSize: 14,
     color: '#6BCF9F',
     fontWeight: '700',
+    fontFamily: fonts.bold,
   },
 });

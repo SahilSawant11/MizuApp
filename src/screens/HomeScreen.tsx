@@ -9,12 +9,15 @@ import {
   SafeAreaView,
   Alert,
 } from 'react-native';
+import Icon from 'react-native-vector-icons/Feather';
+import MaterialIcon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { Entry } from '../models/Entry';
 import { entryRepository } from '../database/entryRepo';
 import { useAuth } from '../contexts/AuthContext';
 import { BudgetProgress } from '../components/BudgetProgress';
 import { BudgetSettingsModal } from '../components/BudgetSettingsModal';
 import { budgetStorage, BudgetSettings } from '../utils/budgetStorage';
+import { fonts } from '../theme/typography';
 
 export const HomeScreen: React.FC = () => {
   const [entries, setEntries] = useState<Entry[]>([]);
@@ -41,9 +44,8 @@ export const HomeScreen: React.FC = () => {
         return { start: today, end: today };
       
       case 'weekly': {
-        // Get start of week (Monday)
         const dayOfWeek = now.getDay();
-        const diff = dayOfWeek === 0 ? -6 : 1 - dayOfWeek; // Adjust when day is Sunday
+        const diff = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
         const monday = new Date(now);
         monday.setDate(now.getDate() + diff);
         const startOfWeek = monday.toISOString().split('T')[0];
@@ -51,7 +53,6 @@ export const HomeScreen: React.FC = () => {
       }
       
       case 'monthly': {
-        // Get start of month
         const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
         return { start: startOfMonth.toISOString().split('T')[0], end: today };
       }
@@ -64,10 +65,8 @@ export const HomeScreen: React.FC = () => {
       
       let data: Entry[];
       if (start === end) {
-        // For daily, use the simpler getByDate
         data = await entryRepository.getByDate(start);
       } else {
-        // For weekly/monthly, use date range
         data = await entryRepository.getByDateRange(start, end);
       }
 
@@ -161,7 +160,7 @@ export const HomeScreen: React.FC = () => {
           <Text style={styles.userName}>Welcome!</Text>
         </View>
         <View style={styles.logoContainer}>
-          <Text style={styles.logo}>☘️</Text>
+          <MaterialIcon name="leaf" size={28} color="#6BCF9F" />
         </View>
       </View>
 
@@ -176,7 +175,7 @@ export const HomeScreen: React.FC = () => {
           />
         ) : (
           <View style={styles.noBudgetCard}>
-            <Text style={styles.noBudgetIcon}>💰</Text>
+            <MaterialIcon name="wallet-outline" size={48} color="#6BCF9F" />
             <Text style={styles.noBudgetTitle}>Set Your Budget</Text>
             <Text style={styles.noBudgetText}>
               Track your spending and stay on top of your finances
@@ -193,6 +192,7 @@ export const HomeScreen: React.FC = () => {
         {/* Summary Section - Side by Side */}
         <View style={styles.summaryRow}>
           <View style={[styles.summaryCard, styles.expenseCard]}>
+            <Icon name="trending-down" size={24} color="#FF6B6B" style={styles.summaryIcon} />
             <Text style={styles.summaryLabel}>
               {budgetSettings?.type === 'daily' ? "Today's" : 
                budgetSettings?.type === 'weekly' ? "This Week's" : 
@@ -202,6 +202,7 @@ export const HomeScreen: React.FC = () => {
           </View>
           
           <View style={[styles.summaryCard, styles.taskCard]}>
+            <Icon name="check-circle" size={24} color="#6BCF9F" style={styles.summaryIcon} />
             <Text style={styles.summaryLabel}>Tasks Logged</Text>
             <Text style={styles.taskCount}>{taskCount}</Text>
           </View>
@@ -209,18 +210,29 @@ export const HomeScreen: React.FC = () => {
 
         {/* Input Section */}
         <View style={styles.inputSection}>
-          <TextInput
-            style={styles.input}
-            value={inputText}
-            onChangeText={setInputText}
-            placeholder="50 groceries or buy milk"
-            placeholderTextColor="#9DB4A8"
-            onSubmitEditing={handleAddEntry}
-            returnKeyType="done"
-          />
-          <Text style={styles.hint}>
-            💡 Include amount for expenses, or just text for tasks
-          </Text>
+          <View style={styles.inputWrapper}>
+            <Icon name="edit-3" size={20} color="#9DB4A8" style={styles.inputIcon} />
+            <TextInput
+              style={styles.input}
+              value={inputText}
+              onChangeText={setInputText}
+              placeholder="50 groceries or buy milk"
+              placeholderTextColor="#9DB4A8"
+              onSubmitEditing={handleAddEntry}
+              returnKeyType="done"
+            />
+            {inputText.length > 0 && (
+              <TouchableOpacity onPress={handleAddEntry} style={styles.sendButton}>
+                <Icon name="send" size={20} color="#6BCF9F" />
+              </TouchableOpacity>
+            )}
+          </View>
+          <View style={styles.hintRow}>
+            <Icon name="info" size={14} color="#9DB4A8" />
+            <Text style={styles.hint}>
+              Include amount for expenses, or just text for tasks
+            </Text>
+          </View>
         </View>
 
         {/* Combined List */}
@@ -232,7 +244,7 @@ export const HomeScreen: React.FC = () => {
           </Text>
           {entries.length === 0 ? (
             <View style={styles.emptyState}>
-              <Text style={styles.emptyIcon}>📝</Text>
+              <Icon name="inbox" size={48} color="#9DB4A8" />
               <Text style={styles.emptyText}>No entries yet</Text>
               <Text style={styles.emptySubtext}>Start adding expenses or tasks</Text>
             </View>
@@ -240,20 +252,27 @@ export const HomeScreen: React.FC = () => {
             entries.map(entry => (
               <View key={entry.id} style={styles.listItem}>
                 <View style={styles.itemLeft}>
-                  {/* {entry.type === 'activity' && <View style={styles.checkbox} />} */}
+                  <View style={[
+                    styles.iconBadge,
+                    entry.type === 'expense' ? styles.expenseBadge : styles.activityBadge
+                  ]}>
+                    <Icon 
+                      name={entry.type === 'expense' ? 'dollar-sign' : 'check'} 
+                      size={16} 
+                      color={entry.type === 'expense' ? '#FF6B6B' : '#6BCF9F'} 
+                    />
+                  </View>
                   <View style={styles.itemContent}>
-                    <View style={styles.itemHeader}>
-                      <Text style={styles.itemText}>{entry.title}</Text>
-                        <Text style={[styles.badgeText, entry.type === 'expense' ? styles.expenseText : styles.activityText]}>
-                          {entry.type === 'expense' ? '' : ''}
-                        </Text>
+                    <Text style={styles.itemText}>{entry.title}</Text>
+                    <View style={styles.itemMeta}>
+                      <Icon name="clock" size={12} color="#9DB4A8" />
+                      <Text style={styles.itemTime}>
+                        {new Date(entry.created_at).toLocaleTimeString('en-US', {
+                          hour: '2-digit',
+                          minute: '2-digit',
+                        })}
+                      </Text>
                     </View>
-                    <Text style={styles.itemTime}>
-                      {new Date(entry.created_at).toLocaleTimeString('en-US', {
-                        hour: '2-digit',
-                        minute: '2-digit',
-                      })}
-                    </Text>
                   </View>
                 </View>
                 <View style={styles.itemRight}>
@@ -264,7 +283,7 @@ export const HomeScreen: React.FC = () => {
                     onPress={() => handleDeleteEntry(entry.id!)}
                     style={styles.deleteButton}
                   >
-                    <Text style={styles.deleteIcon}>×</Text>
+                    <Icon name="x" size={18} color="#FF6B6B" />
                   </TouchableOpacity>
                 </View>
               </View>
@@ -302,11 +321,13 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#5F7A6F',
     marginBottom: 4,
+    fontFamily: fonts.regular,
   },
   userName: {
     fontSize: 24,
     fontWeight: '700',
     color: '#1A3A2E',
+    fontFamily: fonts.bold,
   },
   logoContainer: {
     width: 48,
@@ -315,9 +336,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#E8F5EE',
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  logo: {
-    fontSize: 24,
   },
   content: {
     padding: 24,
@@ -335,21 +353,20 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 2,
   },
-  noBudgetIcon: {
-    fontSize: 48,
-    marginBottom: 12,
-  },
   noBudgetTitle: {
     fontSize: 20,
     fontWeight: '700',
     color: '#1A3A2E',
+    marginTop: 12,
     marginBottom: 8,
+    fontFamily: fonts.bold,
   },
   noBudgetText: {
     fontSize: 14,
     color: '#5F7A6F',
     textAlign: 'center',
     marginBottom: 20,
+    fontFamily: fonts.regular,
   },
   setBudgetButton: {
     backgroundColor: '#6BCF9F',
@@ -361,6 +378,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: '#FFFFFF',
+    fontFamily: fonts.semibold,
   },
   summaryRow: {
     flexDirection: 'row',
@@ -386,42 +404,66 @@ const styles = StyleSheet.create({
     borderLeftWidth: 4,
     borderLeftColor: '#6BCF9F',
   },
+  summaryIcon: {
+    marginBottom: 8,
+  },
   summaryLabel: {
     fontSize: 12,
     color: '#5F7A6F',
     marginBottom: 8,
     fontWeight: '600',
+    fontFamily: fonts.semibold,
   },
   expenseAmount: {
     fontSize: 28,
     fontWeight: '700',
     color: '#1A3A2E',
     letterSpacing: -1,
+    fontFamily: fonts.bold,
   },
   taskCount: {
     fontSize: 28,
     fontWeight: '700',
     color: '#1A3A2E',
+    fontFamily: fonts.bold,
   },
   inputSection: {
     marginBottom: 32,
   },
-  input: {
-    fontSize: 16,
-    color: '#1A3A2E',
-    paddingVertical: 16,
-    paddingHorizontal: 20,
+  inputWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
     backgroundColor: '#FFFFFF',
     borderRadius: 12,
     borderWidth: 2,
     borderColor: '#E8F5EE',
-    marginBottom: 8,
+    paddingHorizontal: 16,
+  },
+  inputIcon: {
+    marginRight: 12,
+  },
+  input: {
+    flex: 1,
+    fontSize: 16,
+    color: '#1A3A2E',
+    paddingVertical: 16,
     fontWeight: '500',
+    fontFamily: fonts.medium,
+  },
+  sendButton: {
+    padding: 8,
+  },
+  hintRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 8,
+    paddingLeft: 4,
   },
   hint: {
     fontSize: 13,
     color: '#9DB4A8',
-    paddingLeft: 4,
+    marginLeft: 6,
+    fontFamily: fonts.regular,
   },
   section: {
     marginBottom: 32,
@@ -431,6 +473,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#1A3A2E',
     marginBottom: 16,
+    fontFamily: fonts.bold,
   },
   emptyState: {
     backgroundColor: '#FFFFFF',
@@ -438,20 +481,19 @@ const styles = StyleSheet.create({
     padding: 40,
     alignItems: 'center',
   },
-  emptyIcon: {
-    fontSize: 48,
-    marginBottom: 12,
-  },
   emptyText: {
     fontSize: 16,
     fontWeight: '600',
     color: '#5F7A6F',
+    marginTop: 12,
     marginBottom: 4,
+    fontFamily: fonts.semibold,
   },
   emptySubtext: {
     fontSize: 14,
     color: '#9DB4A8',
     textAlign: 'center',
+    fontFamily: fonts.regular,
   },
   listItem: {
     flexDirection: 'row',
@@ -473,56 +515,39 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
   },
-  // checkbox: {
-  //   width: 20,
-  //   height: 20,
-  //   borderWidth: 2,
-  //   borderColor: '#D4E8DD',
-  //   borderRadius: 6,
-  //   marginRight: 12,
-  // },
+  iconBadge: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  expenseBadge: {
+    backgroundColor: '#FFE5E5',
+  },
+  activityBadge: {
+    backgroundColor: '#E8F5EE',
+  },
   itemContent: {
     flex: 1,
   },
-  itemHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 4,
-  },
   itemText: {
-    flex: 1,
     fontSize: 16,
     color: '#1A3A2E',
     fontWeight: '500',
-    marginRight: 8,
+    marginBottom: 4,
+    fontFamily: fonts.medium,
   },
-  // badge: {
-  //   width: 24,
-  //   height: 24,
-  //   borderRadius: 12,
-  //   justifyContent: 'center',
-  //   alignItems: 'center',
-  // },
-  // expenseBadge: {
-  //   backgroundColor: '#FFE5E5',
-  // },
-  // activityBadge: {
-  //   backgroundColor: '#E8F5EE',
-  // },
-  badgeText: {
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  expenseText: {
-    color: '#FF6B6B',
-  },
-  activityText: {
-    color: '#6BCF9F',
+  itemMeta: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   itemTime: {
     fontSize: 12,
     color: '#9DB4A8',
+    marginLeft: 4,
+    fontFamily: fonts.regular,
   },
   itemRight: {
     flexDirection: 'row',
@@ -533,6 +558,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#1A3A2E',
     marginRight: 12,
+    fontFamily: fonts.bold,
   },
   deleteButton: {
     width: 32,
@@ -541,10 +567,5 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFE5E5',
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  deleteIcon: {
-    fontSize: 24,
-    color: '#FF6B6B',
-    fontWeight: '300',
   },
 });

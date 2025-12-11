@@ -11,7 +11,9 @@ import {
   Alert,
   Switch,
 } from 'react-native';
+import Icon from 'react-native-vector-icons/Feather';
 import { budgetStorage, BudgetType, BudgetSettings } from '../utils/budgetStorage';
+import { fonts } from '../theme/typography';
 
 interface BudgetSettingsModalProps {
   visible: boolean;
@@ -90,6 +92,28 @@ export const BudgetSettingsModal: React.FC<BudgetSettingsModalProps> = ({
     );
   };
 
+  const getPeriodInfo = () => {
+    switch (type) {
+      case 'daily':
+        return {
+          icon: 'sun',
+          text: 'Track your spending against a daily budget limit',
+        };
+      case 'weekly':
+        return {
+          icon: 'calendar',
+          text: 'Monitor your expenses for the entire week',
+        };
+      case 'monthly':
+        return {
+          icon: 'calendar',
+          text: 'Keep your monthly spending under control',
+        };
+    }
+  };
+
+  const periodInfo = getPeriodInfo();
+
   return (
     <Modal
       visible={visible}
@@ -115,7 +139,12 @@ export const BudgetSettingsModal: React.FC<BudgetSettingsModalProps> = ({
           {/* Enable/Disable Budget */}
           <View style={styles.section}>
             <View style={styles.switchRow}>
-              <Text style={styles.label}>Enable Budget Tracking</Text>
+              <View style={styles.switchLeft}>
+                <View style={styles.iconCircle}>
+                  <Icon name="toggle-right" size={20} color="#6BCF9F" />
+                </View>
+                <Text style={styles.label}>Enable Budget Tracking</Text>
+              </View>
               <Switch
                 value={enabled}
                 onValueChange={setEnabled}
@@ -129,7 +158,7 @@ export const BudgetSettingsModal: React.FC<BudgetSettingsModalProps> = ({
           <View style={styles.section}>
             <Text style={styles.label}>Budget Amount</Text>
             <View style={styles.inputContainer}>
-              <Text style={styles.currencySymbol}>₹</Text>
+              <Icon name="dollar-sign" size={20} color="#1A3A2E" style={styles.currencyIcon} />
               <TextInput
                 style={styles.input}
                 value={amount}
@@ -155,6 +184,12 @@ export const BudgetSettingsModal: React.FC<BudgetSettingsModalProps> = ({
                 onPress={() => enabled && setType('daily')}
                 disabled={!enabled}
               >
+                <Icon 
+                  name="sun" 
+                  size={20} 
+                  color={type === 'daily' ? '#FFFFFF' : '#5F7A6F'} 
+                  style={styles.typeIcon}
+                />
                 <Text
                   style={[
                     styles.typeButtonText,
@@ -174,6 +209,12 @@ export const BudgetSettingsModal: React.FC<BudgetSettingsModalProps> = ({
                 onPress={() => enabled && setType('weekly')}
                 disabled={!enabled}
               >
+                <Icon 
+                  name="calendar" 
+                  size={20} 
+                  color={type === 'weekly' ? '#FFFFFF' : '#5F7A6F'} 
+                  style={styles.typeIcon}
+                />
                 <Text
                   style={[
                     styles.typeButtonText,
@@ -193,6 +234,12 @@ export const BudgetSettingsModal: React.FC<BudgetSettingsModalProps> = ({
                 onPress={() => enabled && setType('monthly')}
                 disabled={!enabled}
               >
+                <Icon 
+                  name="calendar" 
+                  size={20} 
+                  color={type === 'monthly' ? '#FFFFFF' : '#5F7A6F'} 
+                  style={styles.typeIcon}
+                />
                 <Text
                   style={[
                     styles.typeButtonText,
@@ -207,16 +254,13 @@ export const BudgetSettingsModal: React.FC<BudgetSettingsModalProps> = ({
 
           {/* Info Text */}
           <View style={styles.infoBox}>
-            <Text style={styles.infoIcon}>💡</Text>
-            <Text style={styles.infoText}>
-              {type === 'daily' && 'Track your spending against a daily budget limit'}
-              {type === 'weekly' && 'Monitor your expenses for the entire week'}
-              {type === 'monthly' && 'Keep your monthly spending under control'}
-            </Text>
+            <Icon name={periodInfo.icon} size={20} color="#6BCF9F" />
+            <Text style={styles.infoText}>{periodInfo.text}</Text>
           </View>
 
           {/* Clear Budget Button */}
           <TouchableOpacity style={styles.clearButton} onPress={handleClear}>
+            <Icon name="trash-2" size={18} color="#FF6B6B" style={styles.clearIcon} />
             <Text style={styles.clearButtonText}>Clear Budget Settings</Text>
           </TouchableOpacity>
         </View>
@@ -243,16 +287,19 @@ const styles = StyleSheet.create({
   cancelButton: {
     fontSize: 16,
     color: '#5F7A6F',
+    fontFamily: fonts.regular,
   },
   headerTitle: {
     fontSize: 18,
     fontWeight: '600',
     color: '#1A3A2E',
+    fontFamily: fonts.semibold,
   },
   saveButton: {
     fontSize: 16,
     fontWeight: '600',
     color: '#6BCF9F',
+    fontFamily: fonts.semibold,
   },
   content: {
     flex: 1,
@@ -267,6 +314,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#1A3A2E',
     marginBottom: 12,
+    fontFamily: fonts.semibold,
   },
   switchRow: {
     flexDirection: 'row',
@@ -275,6 +323,20 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     padding: 16,
     borderRadius: 12,
+  },
+  switchLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  iconCircle: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#E8F5EE',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
   },
   inputContainer: {
     flexDirection: 'row',
@@ -285,10 +347,7 @@ const styles = StyleSheet.create({
     borderColor: '#E8F5EE',
     paddingHorizontal: 16,
   },
-  currencySymbol: {
-    fontSize: 20,
-    fontWeight: '600',
-    color: '#1A3A2E',
+  currencyIcon: {
     marginRight: 8,
   },
   input: {
@@ -297,6 +356,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#1A3A2E',
     paddingVertical: 16,
+    fontFamily: fonts.semibold,
   },
   typeSelector: {
     flexDirection: 'row',
@@ -318,10 +378,14 @@ const styles = StyleSheet.create({
   typeButtonDisabled: {
     opacity: 0.5,
   },
+  typeIcon: {
+    marginBottom: 6,
+  },
   typeButtonText: {
     fontSize: 15,
     color: '#5F7A6F',
     fontWeight: '600',
+    fontFamily: fonts.semibold,
   },
   typeButtonTextActive: {
     color: '#FFFFFF',
@@ -333,25 +397,29 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     marginBottom: 24,
   },
-  infoIcon: {
-    fontSize: 20,
-    marginRight: 12,
-  },
   infoText: {
     flex: 1,
     fontSize: 14,
     color: '#5F7A6F',
     lineHeight: 20,
+    marginLeft: 12,
+    fontFamily: fonts.regular,
   },
   clearButton: {
+    flexDirection: 'row',
     backgroundColor: '#FFE5E5',
     paddingVertical: 14,
     borderRadius: 12,
     alignItems: 'center',
+    justifyContent: 'center',
+  },
+  clearIcon: {
+    marginRight: 8,
   },
   clearButtonText: {
     fontSize: 15,
     fontWeight: '600',
     color: '#FF6B6B',
+    fontFamily: fonts.semibold,
   },
 });

@@ -10,10 +10,12 @@ import {
   ActivityIndicator,
   RefreshControl,
 } from 'react-native';
+import Icon from 'react-native-vector-icons/Feather';
 import { Entry } from '../models/Entry';
 import { entryRepository } from '../database/entryRepo';
 import { useAuth } from '../contexts/AuthContext';
 import { useFocusEffect } from '@react-navigation/native';
+import { fonts } from '../theme/typography';
 
 interface DayData {
   date: string;
@@ -30,7 +32,6 @@ export const CalendarScreen: React.FC = () => {
   const [refreshing, setRefreshing] = useState(false);
   const { user } = useAuth();
 
-  // Format date consistently
   const formatDate = (date: Date): string => {
     const year = date.getFullYear();
     const month = String(date.getMonth() + 1).padStart(2, '0');
@@ -46,7 +47,6 @@ export const CalendarScreen: React.FC = () => {
       const year = currentDate.getFullYear();
       const month = currentDate.getMonth();
       
-      // Get first and last day of month
       const firstDay = new Date(year, month, 1);
       const lastDay = new Date(year, month + 1, 0);
       
@@ -59,7 +59,6 @@ export const CalendarScreen: React.FC = () => {
       
       console.log('📊 Entries loaded:', entries.length);
       
-      // Group by date
       const dataMap = new Map<string, DayData>();
       entries.forEach(entry => {
         const existing = dataMap.get(entry.date);
@@ -103,7 +102,6 @@ export const CalendarScreen: React.FC = () => {
     }
   }, [selectedDate, user]);
 
-  // Load data when screen comes into focus
   useFocusEffect(
     useCallback(() => {
       if (user) {
@@ -113,14 +111,12 @@ export const CalendarScreen: React.FC = () => {
     }, [user, loadMonthData, loadSelectedDayEntries])
   );
 
-  // Load month data when currentDate changes
   useEffect(() => {
     if (user) {
       loadMonthData();
     }
   }, [user, currentDate, loadMonthData]);
 
-  // Load selected day entries when selectedDate changes
   useEffect(() => {
     if (user) {
       loadSelectedDayEntries();
@@ -141,13 +137,11 @@ export const CalendarScreen: React.FC = () => {
     
     const days: (Date | null)[] = [];
     
-    // Add empty cells for days before month starts
     const firstDayOfWeek = firstDay.getDay();
     for (let i = 0; i < firstDayOfWeek; i++) {
       days.push(null);
     }
     
-    // Add all days of month
     for (let day = 1; day <= lastDay.getDate(); day++) {
       days.push(new Date(year, month, day));
     }
@@ -196,10 +190,10 @@ export const CalendarScreen: React.FC = () => {
   };
 
   const getDotColor = (amount: number): string => {
-    if (amount === 0) return '#6BCF9F'; // No expenses (tasks only)
-    if (amount < 100) return '#6BCF9F'; // Low
-    if (amount < 500) return '#FFD166'; // Medium
-    return '#FF6B6B'; // High
+    if (amount === 0) return '#6BCF9F';
+    if (amount < 100) return '#6BCF9F';
+    if (amount < 500) return '#FFD166';
+    return '#FF6B6B';
   };
 
   const isToday = (date: Date): boolean => {
@@ -222,6 +216,7 @@ export const CalendarScreen: React.FC = () => {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.centerContainer}>
+          <Icon name="alert-circle" size={48} color="#FF6B6B" />
           <Text style={styles.errorText}>Please log in to view calendar</Text>
         </View>
       </SafeAreaView>
@@ -231,7 +226,10 @@ export const CalendarScreen: React.FC = () => {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>📅 Calendar</Text>
+        <View style={styles.headerLeft}>
+          <Icon name="calendar" size={24} color="#6BCF9F" style={styles.headerIcon} />
+          <Text style={styles.headerTitle}>Calendar</Text>
+        </View>
         <View style={styles.headerRight}>
           {loading && <ActivityIndicator size="small" color="#6BCF9F" style={{ marginRight: 12 }} />}
           <TouchableOpacity style={styles.todayButton} onPress={goToToday}>
@@ -253,11 +251,11 @@ export const CalendarScreen: React.FC = () => {
         {/* Month Navigation */}
         <View style={styles.monthHeader}>
           <TouchableOpacity style={styles.navButton} onPress={goToPreviousMonth}>
-            <Text style={styles.navButtonText}>←</Text>
+            <Icon name="chevron-left" size={24} color="#1A3A2E" />
           </TouchableOpacity>
           <Text style={styles.monthTitle}>{monthName}</Text>
           <TouchableOpacity style={styles.navButton} onPress={goToNextMonth}>
-            <Text style={styles.navButtonText}>→</Text>
+            <Icon name="chevron-right" size={24} color="#1A3A2E" />
           </TouchableOpacity>
         </View>
 
@@ -333,7 +331,7 @@ export const CalendarScreen: React.FC = () => {
 
           {selectedDayEntries.length === 0 ? (
             <View style={styles.emptyState}>
-              <Text style={styles.emptyIcon}>📝</Text>
+              <Icon name="inbox" size={48} color="#9DB4A8" />
               <Text style={styles.emptyText}>No entries for this day</Text>
               <Text style={styles.emptySubtext}>
                 {isToday(selectedDate) ? 'Start tracking your day!' : 'Select another date'}
@@ -344,21 +342,26 @@ export const CalendarScreen: React.FC = () => {
               <View key={entry.id} style={styles.entryCard}>
                 <View style={styles.entryLeft}>
                   <View style={[styles.entryBadge, entry.type === 'expense' ? styles.expenseBadge : styles.activityBadge]}>
-                    <Text style={styles.entryBadgeText}>
-                      {entry.type === 'expense' ? '💸' : '✓'}
-                    </Text>
+                    <Icon 
+                      name={entry.type === 'expense' ? 'dollar-sign' : 'check'} 
+                      size={16} 
+                      color={entry.type === 'expense' ? '#FF6B6B' : '#6BCF9F'} 
+                    />
                   </View>
                   <View style={styles.entryContent}>
                     <Text style={styles.entryTitle}>{entry.title}</Text>
                     {entry.category && (
                       <Text style={styles.entryCategory}>{entry.category}</Text>
                     )}
-                    <Text style={styles.entryTime}>
-                      {new Date(entry.created_at).toLocaleTimeString('en-US', {
-                        hour: '2-digit',
-                        minute: '2-digit',
-                      })}
-                    </Text>
+                    <View style={styles.entryTimeRow}>
+                      <Icon name="clock" size={12} color="#9DB4A8" />
+                      <Text style={styles.entryTime}>
+                        {new Date(entry.created_at).toLocaleTimeString('en-US', {
+                          hour: '2-digit',
+                          minute: '2-digit',
+                        })}
+                      </Text>
+                    </View>
                   </View>
                 </View>
                 <View style={styles.entryRight}>
@@ -369,7 +372,7 @@ export const CalendarScreen: React.FC = () => {
                     onPress={() => handleDeleteEntry(entry.id!)}
                     style={styles.deleteButton}
                   >
-                    <Text style={styles.deleteIcon}>×</Text>
+                    <Icon name="trash-2" size={16} color="#FF6B6B" />
                   </TouchableOpacity>
                 </View>
               </View>
@@ -377,11 +380,14 @@ export const CalendarScreen: React.FC = () => {
           )}
         </View>
 
-        {/* Debug info (remove in production) */}
+        {/* Debug info */}
         <View style={styles.debugInfo}>
-          <Text style={styles.debugText}>User: {user.email}</Text>
-          <Text style={styles.debugText}>Entries this month: {monthData.size} days</Text>
-          <Text style={styles.debugText}>Selected day: {selectedDayEntries.length} entries</Text>
+          <Icon name="info" size={14} color="#5F7A6F" style={{ marginRight: 8 }} />
+          <View style={{ flex: 1 }}>
+            <Text style={styles.debugText}>User: {user.email}</Text>
+            <Text style={styles.debugText}>Entries this month: {monthData.size} days</Text>
+            <Text style={styles.debugText}>Selected day: {selectedDayEntries.length} entries</Text>
+          </View>
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -401,6 +407,8 @@ const styles = StyleSheet.create({
   errorText: {
     fontSize: 16,
     color: '#FF6B6B',
+    marginTop: 12,
+    fontFamily: fonts.medium,
   },
   header: {
     flexDirection: 'row',
@@ -412,10 +420,18 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#E8F5EE',
   },
+  headerLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  headerIcon: {
+    marginRight: 12,
+  },
   headerTitle: {
     fontSize: 24,
     fontWeight: '700',
     color: '#1A3A2E',
+    fontFamily: fonts.bold,
   },
   headerRight: {
     flexDirection: 'row',
@@ -431,6 +447,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     color: '#FFFFFF',
+    fontFamily: fonts.semibold,
   },
   content: {
     padding: 24,
@@ -455,14 +472,11 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 2,
   },
-  navButtonText: {
-    fontSize: 20,
-    color: '#1A3A2E',
-  },
   monthTitle: {
     fontSize: 20,
     fontWeight: '700',
     color: '#1A3A2E',
+    fontFamily: fonts.bold,
   },
   calendar: {
     backgroundColor: '#FFFFFF',
@@ -487,6 +501,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '600',
     color: '#9DB4A8',
+    fontFamily: fonts.semibold,
   },
   daysContainer: {
     flexDirection: 'row',
@@ -511,14 +526,17 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#1A3A2E',
     fontWeight: '500',
+    fontFamily: fonts.medium,
   },
   todayText: {
     fontWeight: '700',
     color: '#6BCF9F',
+    fontFamily: fonts.bold,
   },
   selectedText: {
     color: '#FFFFFF',
     fontWeight: '700',
+    fontFamily: fonts.bold,
   },
   dot: {
     position: 'absolute',
@@ -552,29 +570,30 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#1A3A2E',
     flex: 1,
+    fontFamily: fonts.bold,
   },
   selectedDayTotal: {
     fontSize: 20,
     fontWeight: '700',
     color: '#FF6B6B',
+    fontFamily: fonts.bold,
   },
   emptyState: {
     alignItems: 'center',
     paddingVertical: 40,
   },
-  emptyIcon: {
-    fontSize: 48,
-    marginBottom: 12,
-  },
   emptyText: {
     fontSize: 16,
     fontWeight: '600',
     color: '#5F7A6F',
+    marginTop: 12,
     marginBottom: 4,
+    fontFamily: fonts.semibold,
   },
   emptySubtext: {
     fontSize: 14,
     color: '#9DB4A8',
+    fontFamily: fonts.regular,
   },
   entryCard: {
     flexDirection: 'row',
@@ -603,9 +622,6 @@ const styles = StyleSheet.create({
   activityBadge: {
     backgroundColor: '#E8F5EE',
   },
-  entryBadgeText: {
-    fontSize: 16,
-  },
   entryContent: {
     flex: 1,
   },
@@ -614,15 +630,23 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#1A3A2E',
     marginBottom: 2,
+    fontFamily: fonts.semibold,
   },
   entryCategory: {
     fontSize: 12,
     color: '#9DB4A8',
     marginBottom: 2,
+    fontFamily: fonts.regular,
+  },
+  entryTimeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   entryTime: {
     fontSize: 12,
     color: '#9DB4A8',
+    marginLeft: 4,
+    fontFamily: fonts.regular,
   },
   entryRight: {
     flexDirection: 'row',
@@ -633,6 +657,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#1A3A2E',
     marginRight: 12,
+    fontFamily: fonts.bold,
   },
   deleteButton: {
     width: 28,
@@ -642,12 +667,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  deleteIcon: {
-    fontSize: 20,
-    color: '#FF6B6B',
-    fontWeight: '300',
-  },
   debugInfo: {
+    flexDirection: 'row',
     backgroundColor: '#E8F5EE',
     borderRadius: 12,
     padding: 12,
@@ -657,5 +678,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#5F7A6F',
     marginBottom: 4,
+    fontFamily: fonts.regular,
   },
 });

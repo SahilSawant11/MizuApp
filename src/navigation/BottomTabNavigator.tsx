@@ -1,8 +1,9 @@
 import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import Icon from 'react-native-vector-icons/Feather';
 import { HomeScreen } from '../screens/HomeScreen';
 import { CalendarScreen } from '../screens/CalendarScreen';
-import { ProfileScreen } from '../screens/ProfileScreen'; 
+import { ProfileScreen } from '../screens/ProfileScreen';
 
 const Tab = createBottomTabNavigator();
 
@@ -31,8 +32,8 @@ export const BottomTabNavigator = () => {
         name="Today"
         component={HomeScreen}
         options={{
-          tabBarIcon: ({ color }) => (
-            <TabIcon emoji="✓" color={color} />
+          tabBarIcon: ({ color, size }) => (
+            <Icon name="home" size={size} color={color} />
           ),
         }}
       />
@@ -40,8 +41,8 @@ export const BottomTabNavigator = () => {
         name="Calendar"
         component={CalendarScreen}
         options={{
-          tabBarIcon: ({ color }) => (
-            <TabIcon emoji="📅" color={color} />
+          tabBarIcon: ({ color, size }) => (
+            <Icon name="calendar" size={size} color={color} />
           ),
         }}
       />
@@ -49,26 +50,11 @@ export const BottomTabNavigator = () => {
         name="Profile"
         component={ProfileScreen}
         options={{
-          tabBarIcon: ({ color }) => (
-            <TabIcon emoji="👤" color={color} />
+          tabBarIcon: ({ color, size }) => (
+            <Icon name="user" size={size} color={color} />
           ),
         }}
       />
     </Tab.Navigator>
   );
 };
-
-const TabIcon = ({ emoji, color }: { emoji: string; color: string }) => {
-  return (
-    <View>
-      <Text style={{ 
-        fontSize: 24, 
-        opacity: color === '#6BCF9F' ? 1 : 0.6 
-      }}>
-        {emoji}
-      </Text>
-    </View>
-  );
-};
-
-import { Text, View } from 'react-native';
