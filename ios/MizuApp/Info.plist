@@ -58,5 +58,10 @@
 		<string>Inter-Regular.ttf</string>
 		<string>Inter-SemiBold.ttf</string>
 	</array>
+	<key>UIAppFonts</key>
+<array>
+  <string>Feather.ttf</string>
+  <string>MaterialCommunityIcons.ttf</string>
+</array>
 </dict>
 </plist>
