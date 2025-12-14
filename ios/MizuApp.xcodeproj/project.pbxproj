@@ -9,30 +9,30 @@
 /* Begin PBXBuildFile section */
 		13B07FBF1A68108700A75B9A /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 13B07FB51A68108700A75B9A /* Images.xcassets */; };
 		3E4AF837DE4E410FB3214121 /* Inter-Bold.ttf in Resources */ = {isa = PBXBuildFile; fileRef = CE5C5E9EEECF4524862B3A73 /* Inter-Bold.ttf */; };
+		6386DF95750011A8169FF25A /* libPods-MizuApp.a in Frameworks */ = {isa = PBXBuildFile; fileRef = A8A1E726A0C550FD76F8BBEA /* libPods-MizuApp.a */; };
 		761780ED2CA45674006654EE /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 761780EC2CA45674006654EE /* AppDelegate.swift */; };
 		7A816DB14CD94B90B848D2C4 /* Inter-Medium.ttf in Resources */ = {isa = PBXBuildFile; fileRef = FDA1ED3335DA4B6DA6078164 /* Inter-Medium.ttf */; };
 		81AB9BB82411601600AC10FF /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 81AB9BB72411601600AC10FF /* LaunchScreen.storyboard */; };
 		940232780BA744019D85F309 /* Inter-SemiBold.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 6718C9C63C324577B5362D15 /* Inter-SemiBold.ttf */; };
 		9EA49F84273F440E817F547A /* Inter-Regular.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 3A4070AA6A0C48BE9307D1EB /* Inter-Regular.ttf */; };
 		AA41D8D28EE62CDB35B53833 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 13B07FB81A68108700A75B9A /* PrivacyInfo.xcprivacy */; };
-		C29DDDED619BDD89C08B1DA7 /* libPods-MizuApp.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 563E50DBBD0E2EC9EC540A5C /* libPods-MizuApp.a */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		08C5DE69C1341A91F6B209B9 /* Pods-MizuApp.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-MizuApp.debug.xcconfig"; path = "Target Support Files/Pods-MizuApp/Pods-MizuApp.debug.xcconfig"; sourceTree = "<group>"; };
 		13B07F961A680F5B00A75B9A /* MizuApp.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = MizuApp.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		13B07FB51A68108700A75B9A /* Images.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; name = Images.xcassets; path = MizuApp/Images.xcassets; sourceTree = "<group>"; };
 		13B07FB61A68108700A75B9A /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = Info.plist; path = MizuApp/Info.plist; sourceTree = "<group>"; };
 		13B07FB81A68108700A75B9A /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = PrivacyInfo.xcprivacy; path = MizuApp/PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
-		3A4070AA6A0C48BE9307D1EB /* Inter-Regular.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = "Inter-Regular.ttf"; path = "../assets/fonts/Inter-Regular.ttf"; sourceTree = "<group>"; };
-		504C764749E7474B6C306CBA /* Pods-MizuApp.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-MizuApp.debug.xcconfig"; path = "Target Support Files/Pods-MizuApp/Pods-MizuApp.debug.xcconfig"; sourceTree = "<group>"; };
-		563E50DBBD0E2EC9EC540A5C /* libPods-MizuApp.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-MizuApp.a"; sourceTree = BUILT_PRODUCTS_DIR; };
-		6718C9C63C324577B5362D15 /* Inter-SemiBold.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = "Inter-SemiBold.ttf"; path = "../assets/fonts/Inter-SemiBold.ttf"; sourceTree = "<group>"; };
+		2CE5EAAA684090C81DBC9D04 /* Pods-MizuApp.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-MizuApp.release.xcconfig"; path = "Target Support Files/Pods-MizuApp/Pods-MizuApp.release.xcconfig"; sourceTree = "<group>"; };
+		3A4070AA6A0C48BE9307D1EB /* Inter-Regular.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "Inter-Regular.ttf"; path = "../assets/fonts/Inter-Regular.ttf"; sourceTree = "<group>"; };
+		6718C9C63C324577B5362D15 /* Inter-SemiBold.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "Inter-SemiBold.ttf"; path = "../assets/fonts/Inter-SemiBold.ttf"; sourceTree = "<group>"; };
 		761780EC2CA45674006654EE /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AppDelegate.swift; path = MizuApp/AppDelegate.swift; sourceTree = "<group>"; };
 		81AB9BB72411601600AC10FF /* LaunchScreen.storyboard */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.storyboard; name = LaunchScreen.storyboard; path = MizuApp/LaunchScreen.storyboard; sourceTree = "<group>"; };
-		9B263280FC1A5A1963B27A15 /* Pods-MizuApp.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-MizuApp.release.xcconfig"; path = "Target Support Files/Pods-MizuApp/Pods-MizuApp.release.xcconfig"; sourceTree = "<group>"; };
-		CE5C5E9EEECF4524862B3A73 /* Inter-Bold.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = "Inter-Bold.ttf"; path = "../assets/fonts/Inter-Bold.ttf"; sourceTree = "<group>"; };
+		A8A1E726A0C550FD76F8BBEA /* libPods-MizuApp.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-MizuApp.a"; sourceTree = BUILT_PRODUCTS_DIR; };
+		CE5C5E9EEECF4524862B3A73 /* Inter-Bold.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "Inter-Bold.ttf"; path = "../assets/fonts/Inter-Bold.ttf"; sourceTree = "<group>"; };
 		ED297162215061F000B7C4FE /* JavaScriptCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = JavaScriptCore.framework; path = System/Library/Frameworks/JavaScriptCore.framework; sourceTree = SDKROOT; };
-		FDA1ED3335DA4B6DA6078164 /* Inter-Medium.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = "Inter-Medium.ttf"; path = "../assets/fonts/Inter-Medium.ttf"; sourceTree = "<group>"; };
+		FDA1ED3335DA4B6DA6078164 /* Inter-Medium.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "Inter-Medium.ttf"; path = "../assets/fonts/Inter-Medium.ttf"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -40,7 +40,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				C29DDDED619BDD89C08B1DA7 /* libPods-MizuApp.a in Frameworks */,
+				6386DF95750011A8169FF25A /* libPods-MizuApp.a in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -63,7 +63,7 @@
 			isa = PBXGroup;
 			children = (
 				ED297162215061F000B7C4FE /* JavaScriptCore.framework */,
-				563E50DBBD0E2EC9EC540A5C /* libPods-MizuApp.a */,
+				A8A1E726A0C550FD76F8BBEA /* libPods-MizuApp.a */,
 			);
 			name = Frameworks;
 			sourceTree = "<group>";
@@ -101,8 +101,8 @@
 		BBD78D7AC51CEA395F1C20DB /* Pods */ = {
 			isa = PBXGroup;
 			children = (
-				504C764749E7474B6C306CBA /* Pods-MizuApp.debug.xcconfig */,
-				9B263280FC1A5A1963B27A15 /* Pods-MizuApp.release.xcconfig */,
+				08C5DE69C1341A91F6B209B9 /* Pods-MizuApp.debug.xcconfig */,
+				2CE5EAAA684090C81DBC9D04 /* Pods-MizuApp.release.xcconfig */,
 			);
 			path = Pods;
 			sourceTree = "<group>";
@@ -116,7 +116,6 @@
 				6718C9C63C324577B5362D15 /* Inter-SemiBold.ttf */,
 			);
 			name = Resources;
-			path = "";
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -126,13 +125,13 @@
 			isa = PBXNativeTarget;
 			buildConfigurationList = 13B07F931A680F5B00A75B9A /* Build configuration list for PBXNativeTarget "MizuApp" */;
 			buildPhases = (
-				E59A7F7A8EDF1CBB5421E9F1 /* [CP] Check Pods Manifest.lock */,
+				7FF037F0CF8C7B8A4CB18D0B /* [CP] Check Pods Manifest.lock */,
 				13B07F871A680F5B00A75B9A /* Sources */,
 				13B07F8C1A680F5B00A75B9A /* Frameworks */,
 				13B07F8E1A680F5B00A75B9A /* Resources */,
 				00DD1BFF1BD5951E006B06BC /* Bundle React Native code and images */,
-				05315A4B582D5FEBE2C163ED /* [CP] Embed Pods Frameworks */,
-				085BE94A97040F0269F48166 /* [CP] Copy Pods Resources */,
+				45D185BA4AF74C8C9883E5FB /* [CP] Embed Pods Frameworks */,
+				53785CE96788131ED1F5F2DE /* [CP] Copy Pods Resources */,
 			);
 			buildRules = (
 			);
@@ -208,7 +207,7 @@
 			shellPath = /bin/sh;
 			shellScript = "set -e\n\nWITH_ENVIRONMENT=\"$REACT_NATIVE_PATH/scripts/xcode/with-environment.sh\"\nREACT_NATIVE_XCODE=\"$REACT_NATIVE_PATH/scripts/react-native-xcode.sh\"\n\n/bin/sh -c \"$WITH_ENVIRONMENT $REACT_NATIVE_XCODE\"\n";
 		};
-		05315A4B582D5FEBE2C163ED /* [CP] Embed Pods Frameworks */ = {
+		45D185BA4AF74C8C9883E5FB /* [CP] Embed Pods Frameworks */ = {
 			isa = PBXShellScriptBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -216,16 +215,20 @@
 			inputFileListPaths = (
 				"${PODS_ROOT}/Target Support Files/Pods-MizuApp/Pods-MizuApp-frameworks-${CONFIGURATION}-input-files.xcfilelist",
 			);
+			inputPaths = (
+			);
 			name = "[CP] Embed Pods Frameworks";
 			outputFileListPaths = (
 				"${PODS_ROOT}/Target Support Files/Pods-MizuApp/Pods-MizuApp-frameworks-${CONFIGURATION}-output-files.xcfilelist",
+			);
+			outputPaths = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
 			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-MizuApp/Pods-MizuApp-frameworks.sh\"\n";
 			showEnvVarsInLog = 0;
 		};
-		085BE94A97040F0269F48166 /* [CP] Copy Pods Resources */ = {
+		53785CE96788131ED1F5F2DE /* [CP] Copy Pods Resources */ = {
 			isa = PBXShellScriptBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -233,16 +236,20 @@
 			inputFileListPaths = (
 				"${PODS_ROOT}/Target Support Files/Pods-MizuApp/Pods-MizuApp-resources-${CONFIGURATION}-input-files.xcfilelist",
 			);
+			inputPaths = (
+			);
 			name = "[CP] Copy Pods Resources";
 			outputFileListPaths = (
 				"${PODS_ROOT}/Target Support Files/Pods-MizuApp/Pods-MizuApp-resources-${CONFIGURATION}-output-files.xcfilelist",
+			);
+			outputPaths = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
 			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-MizuApp/Pods-MizuApp-resources.sh\"\n";
 			showEnvVarsInLog = 0;
 		};
-		E59A7F7A8EDF1CBB5421E9F1 /* [CP] Check Pods Manifest.lock */ = {
+		7FF037F0CF8C7B8A4CB18D0B /* [CP] Check Pods Manifest.lock */ = {
 			isa = PBXShellScriptBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -280,7 +287,7 @@
 /* Begin XCBuildConfiguration section */
 		13B07F941A680F5B00A75B9A /* Debug */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = 504C764749E7474B6C306CBA /* Pods-MizuApp.debug.xcconfig */;
+			baseConfigurationReference = 08C5DE69C1341A91F6B209B9 /* Pods-MizuApp.debug.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_ENABLE_MODULES = YES;
@@ -309,7 +316,7 @@
 		};
 		13B07F951A680F5B00A75B9A /* Release */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = 9B263280FC1A5A1963B27A15 /* Pods-MizuApp.release.xcconfig */;
+			baseConfigurationReference = 2CE5EAAA684090C81DBC9D04 /* Pods-MizuApp.release.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_ENABLE_MODULES = YES;

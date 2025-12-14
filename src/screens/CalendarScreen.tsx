@@ -342,11 +342,11 @@ export const CalendarScreen: React.FC = () => {
               <View key={entry.id} style={styles.entryCard}>
                 <View style={styles.entryLeft}>
                   <View style={[styles.entryBadge, entry.type === 'expense' ? styles.expenseBadge : styles.activityBadge]}>
-                    <Icon 
-                      name={entry.type === 'expense' ? 'dollar-sign' : 'check'} 
-                      size={16} 
-                      color={entry.type === 'expense' ? '#FF6B6B' : '#6BCF9F'} 
-                    />
+                      {entry.type === 'expense' ? (
+                        <Text style={{ fontSize: 14, fontWeight: 'bold', color: '#FF6B6B' }}>₹</Text>
+                      ) : (
+                        <Icon name="check" size={16} color="#6BCF9F" />
+                      )}
                   </View>
                   <View style={styles.entryContent}>
                     <Text style={styles.entryTitle}>{entry.title}</Text>

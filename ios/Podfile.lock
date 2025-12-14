@@ -2812,7 +2812,7 @@ SPEC CHECKSUMS:
   fmt: a40bb5bd0294ea969aaaba240a927bd33d878cdd
   glog: 5683914934d5b6e4240e497e0f4a3b42d1854183
   hermes-engine: 273e30e7fb618279934b0b95ffab60ecedb7acf5
-  RCT-Folly: 846fda9475e61ec7bcbf8a3fe81edfcaeb090669
+  RCT-Folly: 59ec0ac1f2f39672a0c6e6cecdd39383b764646f
   RCTDeprecation: f17e2ebc07876ca9ab8eb6e4b0a4e4647497ae3a
   RCTRequired: e2c574c1b45231f7efb0834936bd609d75072b63
   RCTTypeSafety: c693294e3993056955c3010eb1ebc574f1fcded6
@@ -2877,7 +2877,7 @@ SPEC CHECKSUMS:
   React-utils: a9abebe9dc25642955b5d2cec8c16bbf55a1bc52
   React-webperformancenativemodule: 85dce57a9e73457a3686aee0d8e929518713fc05
   ReactAppDependencyProvider: cc2795efe30a023c3a505676b9c748b664b9c0a1
-  ReactCodegen: 40ea892923f09fc53203a07702248f10379bb9bb
+  ReactCodegen: 897bad2d2f722ff4dc46fc144f9cc018db0e2ce4
   ReactCommon: c5803af00bd3737dc1631749b1f1da5beba5b049
   RNBootSplash: 1e2d285376d8901d0b106da4829817e53f3eed94
   RNCAsyncStorage: 302f2fac014fd450046c120567ca364632da682b

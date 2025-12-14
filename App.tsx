@@ -4,7 +4,6 @@ import { NavigationContainer } from '@react-navigation/native';
 import { AuthProvider, useAuth } from './src/contexts/AuthContext';
 import { AuthScreen } from './src/screens/AuthScreen';
 import { BottomTabNavigator } from './src/navigation/BottomTabNavigator';
-
 function AppContent() {
   const { user, loading } = useAuth();
 

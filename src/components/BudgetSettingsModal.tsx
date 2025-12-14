@@ -158,7 +158,7 @@ export const BudgetSettingsModal: React.FC<BudgetSettingsModalProps> = ({
           <View style={styles.section}>
             <Text style={styles.label}>Budget Amount</Text>
             <View style={styles.inputContainer}>
-              <Icon name="dollar-sign" size={20} color="#1A3A2E" style={styles.currencyIcon} />
+              <Text style={[styles.currencyIcon, { fontSize: 20, color: '#1A3A2E' }]}>₹</Text>
               <TextInput
                 style={styles.input}
                 value={amount}
