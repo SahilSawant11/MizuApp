@@ -13,6 +13,10 @@ import {
 } from 'react-native';
 import { Entry, EntryType, Category, PaymentMode } from '../models/Entry';
 import { entryRepository } from '../database/entryRepo';
+import { PhotoPicker } from '../components/PhotoPicker';
+import { uploadPhoto } from '../utils/supabaseStorage';
+import { PickedImage } from '../utils/imagePickerHelper';
+import { useAuth } from '../contexts/AuthContext';
 
 interface AddEntryModalProps {
   visible: boolean;
@@ -46,12 +50,19 @@ export const AddEntryModal: React.FC<AddEntryModalProps> = ({
   onSave,
   editEntry,
 }) => {
+  const { user } = useAuth();
   const [type, setType] = useState<EntryType>('expense');
   const [title, setTitle] = useState('');
   const [amount, setAmount] = useState('');
   const [category, setCategory] = useState<Category | null>(null);
   const [paymentMode, setPaymentMode] = useState<PaymentMode | null>(null);
   const [notes, setNotes] = useState('');
+  
+  // Photo state
+  const [photoUri, setPhotoUri] = useState<string | null>(null);
+  const [photoData, setPhotoData] = useState<PickedImage | null>(null);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const [photoPath, setPhotoPath] = useState<string | null>(null);
 
   useEffect(() => {
     if (editEntry) {
@@ -61,6 +72,8 @@ export const AddEntryModal: React.FC<AddEntryModalProps> = ({
       setCategory(editEntry.category || null);
       setPaymentMode(editEntry.payment_mode || null);
       setNotes(editEntry.notes || '');
+      setPhotoUri(editEntry.photo_url || null);
+      setPhotoPath(editEntry.photo_path || null);
     } else {
       resetForm();
     }
@@ -73,6 +86,21 @@ export const AddEntryModal: React.FC<AddEntryModalProps> = ({
     setCategory(null);
     setPaymentMode(null);
     setNotes('');
+    setPhotoUri(null);
+    setPhotoData(null);
+    setPhotoPath(null);
+    setUploadingPhoto(false);
+  };
+
+  const handlePhotoSelected = (image: PickedImage) => {
+    setPhotoUri(image.uri);
+    setPhotoData(image);
+  };
+
+  const handlePhotoRemoved = () => {
+    setPhotoUri(null);
+    setPhotoData(null);
+    setPhotoPath(null);
   };
 
   const handleSave = async () => {
@@ -86,7 +114,50 @@ export const AddEntryModal: React.FC<AddEntryModalProps> = ({
       return;
     }
 
+    if (!user) {
+      Alert.alert('Error', 'User not authenticated');
+      return;
+    }
+
     try {
+      let finalPhotoUrl = photoUri;
+      let finalPhotoPath = photoPath;
+
+      // Upload new photo if selected
+      if (photoData && photoData.uri !== photoUri) {
+        setUploadingPhoto(true);
+        try {
+          const uploadResult = await uploadPhoto(
+            photoData.uri,
+            user.id,
+            photoData.fileName
+          );
+          finalPhotoUrl = uploadResult.publicUrl;
+          finalPhotoPath = uploadResult.path;
+          console.log('✅ Photo uploaded:', uploadResult);
+        } catch (uploadError) {
+          console.error('❌ Photo upload failed:', uploadError);
+          Alert.alert(
+            'Photo Upload Failed',
+            'Do you want to save the entry without the photo?',
+            [
+              { text: 'Cancel', style: 'cancel' },
+              { 
+                text: 'Save Anyway', 
+                onPress: () => {
+                  finalPhotoUrl = null;
+                  finalPhotoPath = null;
+                }
+              },
+            ]
+          );
+          setUploadingPhoto(false);
+          return;
+        } finally {
+          setUploadingPhoto(false);
+        }
+      }
+
       if (editEntry) {
         // Update existing entry
         await entryRepository.update({
@@ -97,6 +168,9 @@ export const AddEntryModal: React.FC<AddEntryModalProps> = ({
           category: type === 'expense' ? (category ?? undefined) : undefined,
           payment_mode: type === 'expense' ? (paymentMode ?? undefined) : undefined,
           notes: notes.trim() || undefined,
+          photo_url: finalPhotoUrl || undefined,
+          photo_path: finalPhotoPath || undefined,
+          has_photo: !!finalPhotoUrl,
         });
       } else {
         // Create new entry
@@ -107,6 +181,9 @@ export const AddEntryModal: React.FC<AddEntryModalProps> = ({
           category: type === 'expense' ? category || undefined : undefined,
           payment_mode: type === 'expense' ? paymentMode || undefined : undefined,
           notes: notes.trim() || undefined,
+          photo_url: finalPhotoUrl || undefined,
+          photo_path: finalPhotoPath || undefined,
+          has_photo: !!finalPhotoUrl,
         });
       }
 
@@ -142,8 +219,10 @@ export const AddEntryModal: React.FC<AddEntryModalProps> = ({
           <Text style={styles.headerTitle}>
             {editEntry ? 'Edit Entry' : 'New Entry'}
           </Text>
-          <TouchableOpacity onPress={handleSave}>
-            <Text style={styles.saveButton}>Save</Text>
+          <TouchableOpacity onPress={handleSave} disabled={uploadingPhoto}>
+            <Text style={[styles.saveButton, uploadingPhoto && styles.saveButtonDisabled]}>
+              Save
+            </Text>
           </TouchableOpacity>
         </View>
 
@@ -278,6 +357,15 @@ export const AddEntryModal: React.FC<AddEntryModalProps> = ({
             </View>
           )}
 
+          {/* Photo Picker */}
+          <PhotoPicker
+            photoUri={photoUri}
+            onPhotoSelected={handlePhotoSelected}
+            onPhotoRemoved={handlePhotoRemoved}
+            loading={uploadingPhoto}
+            disabled={uploadingPhoto}
+          />
+
           {/* Notes Input */}
           <View style={styles.section}>
             <Text style={styles.label}>Notes (Optional)</Text>
@@ -325,6 +413,9 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: '#457B9D',
+  },
+  saveButtonDisabled: {
+    opacity: 0.5,
   },
   content: {
     flex: 1,

@@ -63,5 +63,11 @@
   <string>Feather.ttf</string>
   <string>MaterialCommunityIcons.ttf</string>
 </array>
+<key>NSCameraUsageDescription</key>
+<string>We need camera access to take photos of receipts</string>
+<key>NSPhotoLibraryUsageDescription</key>
+<string>We need photo library access to select receipt images</string>
+<key>NSPhotoLibraryAddUsageDescription</key>
+<string>We need permission to save photos to your library</string>
 </dict>
 </plist>

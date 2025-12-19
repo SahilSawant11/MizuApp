@@ -1,6 +1,6 @@
 import { supabase } from '../config/supabase';
 import { Entry, CreateEntryDTO, UpdateEntryDTO } from '../models/Entry';
-
+import { deletePhoto } from '../utils/storageUtils';
 export const entryRepository = {
   // Create a new entry
   create: async (dto: CreateEntryDTO): Promise<number> => {
@@ -21,7 +21,10 @@ export const entryRepository = {
           payment_mode: dto.payment_mode || null,
           notes: dto.notes || null,
           date,
-          user_id: user.id, // Add user_id
+          user_id: user.id,
+          photo_url: dto.photo_url || null,
+          photo_path: dto.photo_path || null,
+          has_photo: dto.has_photo || false,
         })
         .select('id')
         .single();
@@ -45,7 +48,7 @@ export const entryRepository = {
       const { data, error } = await supabase
         .from('entries')
         .select('*')
-        .eq('user_id', user.id) // Filter by user
+        .eq('user_id', user.id)
         .order('date', { ascending: false })
         .order('created_at', { ascending: false });
 
@@ -67,7 +70,7 @@ export const entryRepository = {
       const { data, error } = await supabase
         .from('entries')
         .select('*')
-        .eq('user_id', user.id) // Filter by user
+        .eq('user_id', user.id)
         .eq('date', date)
         .order('created_at', { ascending: false });
 
@@ -90,7 +93,7 @@ export const entryRepository = {
         .from('entries')
         .select('*')
         .eq('id', id)
-        .eq('user_id', user.id) // Filter by user
+        .eq('user_id', user.id)
         .single();
 
       if (error) throw error;
@@ -119,12 +122,15 @@ export const entryRepository = {
       if (dto.payment_mode !== undefined) updateData.payment_mode = dto.payment_mode;
       if (dto.notes !== undefined) updateData.notes = dto.notes;
       if (dto.date !== undefined) updateData.date = dto.date;
+      if (dto.photo_url !== undefined) updateData.photo_url = dto.photo_url;
+      if (dto.photo_path !== undefined) updateData.photo_path = dto.photo_path;
+      if (dto.has_photo !== undefined) updateData.has_photo = dto.has_photo;
 
       const { error } = await supabase
         .from('entries')
         .update(updateData)
         .eq('id', dto.id)
-        .eq('user_id', user.id); // Ensure user owns the entry
+        .eq('user_id', user.id);
 
       if (error) throw error;
 
@@ -141,11 +147,26 @@ export const entryRepository = {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Not authenticated');
 
+      // Get entry first to check for photo
+      const entry = await entryRepository.getById(id);
+      
+      // Delete photo from storage if exists
+      if (entry?.photo_path) {
+        try {
+          await deletePhoto(entry.photo_path);
+          console.log('✅ Photo deleted from storage');
+        } catch (photoError) {
+          console.warn('⚠️ Failed to delete photo from storage:', photoError);
+          // Continue with entry deletion even if photo deletion fails
+        }
+      }
+
+      // Delete entry from database
       const { error } = await supabase
         .from('entries')
         .delete()
         .eq('id', id)
-        .eq('user_id', user.id); // Ensure user owns the entry
+        .eq('user_id', user.id);
 
       if (error) throw error;
 
@@ -165,7 +186,7 @@ export const entryRepository = {
       let query = supabase
         .from('entries')
         .select('amount')
-        .eq('user_id', user.id) // Filter by user
+        .eq('user_id', user.id)
         .eq('type', 'expense');
 
       if (startDate) {
@@ -196,7 +217,7 @@ export const entryRepository = {
       let query = supabase
         .from('entries')
         .select('id', { count: 'exact', head: true })
-        .eq('user_id', user.id) // Filter by user
+        .eq('user_id', user.id)
         .eq('type', 'activity');
 
       if (startDate) {
@@ -226,7 +247,7 @@ export const entryRepository = {
       const { data, error } = await supabase
         .from('entries')
         .select('*')
-        .eq('user_id', user.id) // Filter by user
+        .eq('user_id', user.id)
         .gte('date', startDate)
         .lte('date', endDate)
         .order('date', { ascending: false })
@@ -250,7 +271,7 @@ export const entryRepository = {
       let query = supabase
         .from('entries')
         .select('category, amount')
-        .eq('user_id', user.id) // Filter by user
+        .eq('user_id', user.id)
         .eq('type', 'expense')
         .not('category', 'is', null);
 
