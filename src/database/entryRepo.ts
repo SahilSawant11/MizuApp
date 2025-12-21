@@ -1,6 +1,6 @@
 import { supabase } from '../config/supabase';
 import { Entry, CreateEntryDTO, UpdateEntryDTO } from '../models/Entry';
-import { deletePhoto } from '../utils/storageUtils';
+import { deletePhoto } from '../utils/supabaseStorage';
 export const entryRepository = {
   // Create a new entry
   create: async (dto: CreateEntryDTO): Promise<number> => {

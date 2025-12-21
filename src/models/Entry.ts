@@ -23,6 +23,11 @@ export interface Entry {
   date: string; // ISO format: YYYY-MM-DD
   created_at: string; // ISO timestamp
   updated_at: string; // ISO timestamp
+  user_id?: string; // User ID from auth
+  // Photo fields
+  photo_url?: string | null;
+  photo_path?: string | null;
+  has_photo?: boolean;
 }
 
 export interface CreateEntryDTO {
@@ -33,6 +38,10 @@ export interface CreateEntryDTO {
   payment_mode?: PaymentMode;
   notes?: string;
   date?: string; // Defaults to today if not provided
+  // Photo fields
+  photo_url?: string;
+  photo_path?: string;
+  has_photo?: boolean;
 }
 
 export interface UpdateEntryDTO extends Partial<CreateEntryDTO> {
@@ -52,5 +61,8 @@ export const createEntry = (dto: CreateEntryDTO): Entry => {
     date: dto.date || new Date().toISOString().split('T')[0],
     created_at: now,
     updated_at: now,
+    photo_url: dto.photo_url || null,
+    photo_path: dto.photo_path || null,
+    has_photo: dto.has_photo || false,
   };
 };
